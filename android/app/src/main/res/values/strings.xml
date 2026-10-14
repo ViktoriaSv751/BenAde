@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BenAde</string>
+    <string name="title_activity_main">BenAde</string>
+    <string name="package_name">hu.benade.app</string>
+    <string name="custom_url_scheme">hu.benade.app</string>
+</resources>

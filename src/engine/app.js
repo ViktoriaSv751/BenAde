@@ -22,7 +22,11 @@ function dayDiff(iso){ const a=parseLocal(todayISO()); const b=parseLocal(iso.sp
 function relLabel(iso){ const n=dayDiff(iso); if(n===0) return {t:'Ma',c:'today'}; if(n===1) return {t:'Holnap',c:'soon'}; if(n<0) return {t:(-n)+' napja lejárt',c:'over'}; if(n<=7) return {t:n+' nap múlva',c:'soon'}; return {t:n+' nap múlva',c:'ok'}; }
 const fmtFt=n=>(Number(n)||0).toLocaleString('hu-HU')+' Ft';
 function titleCase(s){ return String(s||'').trim().replace(/\s+/g,' ').split(' ').map(w=>w? w.split('-').map(p=>p.charAt(0).toLocaleUpperCase('hu-HU')+p.slice(1).toLocaleLowerCase('hu-HU')).join('-'):w).join(' '); }
-function plateFmt(s){ return String(s||'').toLocaleUpperCase('hu-HU').replace(/\s+/g,'').replace(/[^A-Z0-9ÁÉÍÓÖŐÚÜŰ-]/g,''); }
+function plateFmt(s){ let v=String(s||'').toLocaleUpperCase('hu-HU').trim().replace(/\s+/g,' ').replace(/[^A-Z0-9ÁÉÍÓÖŐÚÜŰ \-]/g,''); const c=v.replace(/[\s-]/g,'');
+  if(/^[A-Z]{3}[0-9]{3}$/.test(c)) return c.slice(0,3)+'-'+c.slice(3);           // ABC-123
+  if(/^[A-Z]{4}[0-9]{3}$/.test(c)) return c.slice(0,2)+' '+c.slice(2,4)+'-'+c.slice(4); // AA BB-123 (új formátum)
+  return v; }
+function companyFmt(s){ const v=String(s||'').trim().replace(/\s+/g,' '); return v===v.toLocaleLowerCase('hu-HU')?titleCase(v):v; }
 function sortBy(arr,f){ return arr.slice().sort((a,b)=>f(a)<f(b)?-1:f(a)>f(b)?1:0); }
 
 /* ---------- icons ---------- */
@@ -502,7 +506,7 @@ afterHooks.data=root=>{
   root.querySelectorAll('[data-dtab]').forEach(b=>b.onclick=()=>{ui.dataTab=b.dataset.dtab;ui.search='';saveUI();render();});
   const cf=$('#cf',root);
   if(cf){
-    cf.onsubmit=e=>{ e.preventDefault(); const name=$('#c-name',root).value.trim().replace(/\s+/g,' '); const tax=$('#c-tax',root).value.trim(); const err=$('#c-err',root);
+    cf.onsubmit=e=>{ e.preventDefault(); const name=companyFmt($('#c-name',root).value); const tax=$('#c-tax',root).value.trim(); const err=$('#c-err',root);
       if(!name){ err.textContent='Adja meg a cég nevét.'; err.hidden=false; $('#c-name',root).focus(); return; }
       if(S.companies.some(c=>c.name.toLocaleLowerCase('hu')===name.toLocaleLowerCase('hu'))){ err.textContent='Ilyen nevű cég már szerepel.'; err.hidden=false; return; }
       const c={id:uid(),name,taxId:tax,createdAt:Date.now()}; put('companies',c); ui.dataCompany=c.id; saveUI(); toast('Cég rögzítve','ok'); render(); };
@@ -530,7 +534,7 @@ afterHooks.data=root=>{
 function editCompany(id){
   const c=company(id);
   sheet(`<h3>Cég szerkesztése</h3><form class="form" id="sf"><div class="field"><label for="s-name">Cég neve</label><input class="ctl" id="s-name" value="${esc(c.name)}"></div><div class="field"><label for="s-tax">Adószám</label><input class="ctl num" id="s-tax" value="${esc(c.taxId||'')}"></div><div class="actions"><button type="button" class="btn ghost" data-close>Mégse</button><button class="btn primary" type="submit">Mentés</button></div></form>`,
-  el=>{ $('#sf',el).onsubmit=e=>{ e.preventDefault(); const name=$('#s-name',el).value.trim(); if(!name) return; const o={...c,name,taxId:$('#s-tax',el).value.trim()}; delete o.sample; put('companies',o); closeOverlay(); toast('Mentve','ok'); render(); }; });
+  el=>{ $('#sf',el).onsubmit=e=>{ e.preventDefault(); const name=companyFmt($('#s-name',el).value); if(!name) return; const o={...c,name,taxId:$('#s-tax',el).value.trim()}; delete o.sample; put('companies',o); closeOverlay(); toast('Mentve','ok'); render(); }; });
 }
 function editChild(isD,id){
   const coll=isD?'drivers':'vehicles'; const x=S[coll].find(y=>y.id===id);

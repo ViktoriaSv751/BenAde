@@ -203,6 +203,6 @@ html.app-page, html.app-page body{height:100%;overflow:hidden}
 .ob-steps{list-style:none;padding:0;margin:12px 0 16px;display:flex;flex-direction:column;gap:10px;counter-reset:s}
 .ob-steps li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start}
 .ob-steps li::before{counter-increment:s;content:counter(s);width:30px;height:30px;border-radius:9px;background:var(--brand-soft);color:var(--brand-soft-fg);display:grid;place-items:center;font-family:var(--font-display), sans-serif;font-weight:700;font-size:13px}
-.ob-steps li b{display:block;font-size:14.5px}.ob-steps li span{color:var(--muted);font-size:13px}
+.ob-steps li b{grid-column:2;display:block;font-size:14.5px}.ob-steps li span{grid-column:2;color:var(--muted);font-size:13px;margin-top:-8px}.ob-steps li::before{grid-row:1/3}
 .onboard .actions .btn{flex:1 1 auto}
 .band + main{padding-top:16px}
