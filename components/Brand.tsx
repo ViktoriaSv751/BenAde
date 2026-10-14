@@ -15,8 +15,8 @@ export function Wordmark({ href = "/", light = false }: { href?: string; light?:
     <Link href={href} className="wordmark" aria-label="BenAde – kezdőlap">
       <span className="mark"><TruckIcon /></span>
       <span>
-        <span className="w" style={light ? { color: "#fff" } : undefined}>Ben<b>Ade</b></span>
-        <span className="s" style={{ display: "block", color: light ? "#AFBCDD" : undefined }}>Tachográf emlékeztető</span>
+        <span className="w">Ben<b>Ade</b></span>
+        <span className="s">Tachográf emlékeztető</span>
       </span>
     </Link>
   );

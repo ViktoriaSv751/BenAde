@@ -250,6 +250,9 @@ function renderTodo(){
         </ol>
         <div class="actions"><button class="btn primary" data-go-data="companies">${I.plus} Első cég rögzítése</button><button class="btn ghost" data-act="load-samples">Mintaadatok kipróbáláshoz</button></div>
       </div></div>`:''}
+    ${(ui.todoFilter==='open'&&open.length)?(()=>{const it=open[0];const T=TYPES[it.type];const w=itemWhen(it);const d=dayDiff(w);const start=parseLocal(it.downloadDate||it.issueDate||isoDate(new Date(it.createdAt||Date.now())));const end=parseLocal(w);const p=Math.max(4,Math.min(100,Math.round(100*(Date.now()-start)/Math.max(1,end-start))));
+      const whenTxt=d<0?`<em>${-d} napja</em> lejárt`:d===0?`Ma <em>${fmtTime(w)||'egész nap'}</em>`:d===1?`Holnap <em>${fmtTime(w)}</em>`:`<em>${d}</em> nap múlva`;
+      return `<button class="nextup ${T.cls}" style="--p:${p}" data-open="${it.id}"><span><span class="k">Következő teendő</span><div class="when">${whenTxt}</div><div class="t">${esc(T.name)}</div><div class="m">${esc(cName(it.companyId))} · ${esc(itemSub(it))} · ${fmtDate(w)}</div></span><span class="ring"><span><b>${d<0?'!':Math.abs(d)}</b><small>${d<0?'lejárt':'nap'}</small></span></span></button>`;})():''}
     ${hasSamples()?`<div class="banner sample"><span class="grow">Mintaadatok vannak betöltve, hogy lássa, hogyan működik az app. Éles használat előtt törölje őket.</span><button class="btn sm ghost" data-act="clear-samples">Törlés</button></div>`:''}
     ${over.length&&ui.todoFilter!=='over'?`<div class="banner danger">${I.info}<span class="grow">${over.length} tétel határideje lejárt.</span><button class="btn sm danger" data-filter="over">Mutasd</button></div>`:''}
     <div class="chips" role="tablist">${chips.map(([k,l,n])=>`<button class="chip" role="tab" aria-pressed="${ui.todoFilter===k}" data-filter="${k}">${l}<span class="k">${n}</span></button>`).join('')}</div>

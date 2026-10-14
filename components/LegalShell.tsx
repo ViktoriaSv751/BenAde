@@ -3,7 +3,7 @@ import { Wordmark } from "./Brand";
 
 export default function LegalShell({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
-    <div className="site">
+    <div className="stage"><div className="bgveil" aria-hidden />
       <header className="topbar"><Wordmark /><nav><Link className="btn ghost sm" href="/login">Bejelentkezés</Link></nav></header>
       <main className="doc">
         <h1>{title}</h1>
