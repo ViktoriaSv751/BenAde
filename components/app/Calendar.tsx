@@ -1,0 +1,81 @@
+"use client";
+import { useMemo, useState } from "react";
+import type { Task, TaskType } from "@/lib/types";
+import { TASK_META } from "@/lib/types";
+import { DAYS_SHORT, MONTHS, addDays, addMonths, dayDiff, fmtLong, isoWeek, monthGrid, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
+import { useData, useMutate, useSubject } from "@/lib/data";
+import { Empty, Icon, Seg, Skeleton, TypeIcon } from "@/components/ui";
+import { TaskRow } from "./TaskRow";
+import { TaskDetail } from "./TaskDetail";
+import { TopBar, useShell, useUrlState } from "./Shell";
+
+type Mode = "month" | "week" | "day";
+const TYPES: { v: TaskType | "all"; l: string }[] = [{ v: "all", l: "Mind" }, { v: "vu_download", l: "Fedélzeti" }, { v: "card_download", l: "Kártya" }, { v: "training", l: "Oktatás" }, { v: "invoice", l: "Számla" }, { v: "calibration", l: "Kalibráció" }, { v: "card_expiry", l: "Kártya lej." }];
+
+export function CalendarView() {
+  const data = useData(); const { layout, openCapture } = useShell(); const { get, set } = useUrlState(); const subject = useSubject(); const mutate = useMutate();
+  const t = todayISO();
+  const [cursor, setCursor] = useState(get("d") || t); const [mode, setMode] = useState<Mode>(layout === "phone" ? "week" : "month");
+  const [type, setType] = useState<TaskType | "all">("all"); const [cid, setCid] = useState(""); const [showDone, setShowDone] = useState(false);
+  const [drag, setDrag] = useState<string | null>(null);
+  const sel = get("t");
+  const tasks = useMemo(() => (data?.tasks || []).filter(x => (showDone || x.status === "open") && (type === "all" || x.type === type) && (!cid || x.company_id === cid)), [data, type, cid, showDone]);
+  const byDay = useMemo(() => { const m = new Map<string, Task[]>(); for (const x of tasks) { const k = x.due_at.slice(0, 10); m.set(k, [...(m.get(k) || []), x]); } for (const v of m.values()) v.sort((a, b) => a.due_at.localeCompare(b.due_at)); return m; }, [tasks]);
+  const cd = parseISODate(cursor);
+  const grid = useMemo(() => monthGrid(cd.getFullYear(), cd.getMonth()), [cd]);
+  const weekDays = useMemo(() => { const s = startOfWeek(cursor); return Array.from({ length: 7 }, (_, i) => addDays(s, i)); }, [cursor]);
+  const title = mode === "month" ? `${cd.getFullYear()}. ${MONTHS[cd.getMonth()]}` : mode === "week" ? `${cd.getFullYear()}. ${MONTHS[parseISODate(weekDays[0]).getMonth()]} · ${isoWeek(cursor)}. hét` : fmtLong(cd);
+  const nav = (n: number) => setCursor(mode === "month" ? addMonths(cursor, n) : addDays(cursor, mode === "week" ? 7 * n : n));
+  const dayList = byDay.get(cursor) || [];
+  const onDrop = async (day: string) => { if (!drag) return; const x = data!.tasks.find(y => y.id === drag); setDrag(null); if (!x || x.due_at.slice(0, 10) === day) return; const tm = timeOf(x.due_at); const shift = (new Date(`${day}T00:00`).getTime() - new Date(`${x.due_at.slice(0, 10)}T00:00`).getTime()); await mutate(r => r.task.update(x.id, { due_at: new Date(`${day}T${tm}`).toISOString(), remind_at: x.remind_at.map(rr => new Date(new Date(rr).getTime() + shift).toISOString()) }), { success: "Átütemezve" }); };
+
+  if (!data) return <><TopBar title="Naptár" /><div className="content"><Skeleton n={3} h={120} /></div></>;
+
+  const monthGridEl = (
+    <div className={`cal ${layout === "phone" ? "compact" : ""}`}>
+      <div className="head">{["H", "K", "Sze", "Cs", "P", "Szo", "V"].map(d => <div key={d}>{d}</div>)}</div>
+      <div className="grid">{grid.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; const out = dd.getMonth() !== cd.getMonth(); const max = layout === "phone" ? 0 : 3;
+        return <button key={d} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""}`} aria-selected={cursor === d} onClick={() => { setCursor(d); if (layout === "phone") setMode("day"); }} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
+          <span className="d">{dd.getDate()}</span>
+          {max > 0 && items.slice(0, max).map(x => <span key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && x.due_at.slice(0, 10) < t ? "over" : ""}`} draggable onDragStart={e => { setDrag(x.id); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); set({ t: x.id }); }}>{!x.all_day && <span className="tm">{timeOf(x.due_at)}</span>}<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{subject(x).split(" · ").pop()}</span></span>)}
+          {max > 0 && items.length > max && <span className="more">+{items.length - max} további</span>}
+          {max === 0 && items.length > 0 && <span className="dots">{items.slice(0, 4).map(x => <i key={x.id} className={TASK_META[x.type].cls} />)}</span>}
+        </button>; })}</div>
+    </div>
+  );
+  const weekEl = (
+    <div className="cal">
+      <div className="head">{weekDays.map(d => { const dd = parseISODate(d); return <div key={d} style={{ color: d === t ? "var(--accent)" : undefined }}>{DAYS_SHORT[dd.getDay()]} <b className="mono">{dd.getDate()}</b></div>; })}</div>
+      <div className="grid">{weekDays.map(d => { const items = byDay.get(d) || []; return <div key={d} className={`cell ${d === t ? "today" : ""}`} style={{ minHeight: 220 }} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
+        {items.length === 0 && <span style={{ color: "var(--faint)", fontSize: 12 }}>–</span>}
+        {items.map(x => <button key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && d < t ? "over" : ""}`} style={{ whiteSpace: "normal", textAlign: "left", alignItems: "flex-start", flexDirection: "column", gap: 1, padding: "5px 7px" }} draggable onDragStart={() => setDrag(x.id)} onClick={() => set({ t: x.id })}><span className="tm">{x.all_day ? "egész nap" : timeOf(x.due_at)} · {TASK_META[x.type].short}</span><span>{subject(x)}</span></button>)}
+      </div>; })}</div>
+    </div>
+  );
+  const dayEl = <div className="list">{dayList.length ? dayList.map(x => <TaskRow key={x.id} t={x} selected={sel === x.id} compact={layout === "desktop"} />) : <Empty icon={Icon.calendar(26)} title="Ezen a napon nincs teendő" action={<button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Rögzítés erre a napra</button>} />}</div>;
+
+  const main = (
+    <div className="content">
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <button className="ibtn" onClick={() => nav(-1)} aria-label="Előző">{Icon.chevL()}</button>
+        <button className="ibtn" onClick={() => nav(1)} aria-label="Következő">{Icon.chev()}</button>
+        <h2 style={{ fontSize: 18, flex: 1, minWidth: 0 }}>{title}</h2>
+        <button className="btn ghost sm" onClick={() => setCursor(t)}>Ma</button>
+        <Seg value={mode} onChange={setMode} options={[{ value: "month", label: "Hónap" }, { value: "week", label: "Hét" }, { value: "day", label: "Nap" }]} />
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="chips" style={{ flex: 1 }}>{TYPES.map(x => <button key={x.v} className="chip" aria-pressed={type === x.v} onClick={() => setType(x.v)}>{x.v !== "all" && <TypeIcon type={x.v} size={14} />}{x.l}</button>)}</div>
+        <select className="ctl" style={{ width: "auto", minHeight: 36, padding: "4px 34px 4px 12px", fontSize: 13 }} value={cid} onChange={e => setCid(e.target.value)}><option value="">Minden cég</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <button className="chip" aria-pressed={showDone} onClick={() => setShowDone(s => !s)}>Elvégzettek is</button>
+      </div>
+      {mode === "month" ? monthGridEl : mode === "week" ? weekEl : <><div className="sec" style={{ marginTop: 4 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>{dayEl}</>}
+      {mode === "month" && layout === "phone" && <><div className="sec"><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>{dayEl}</>}
+      {layout !== "phone" && <div className="info">{Icon.info()}<span>Húzással áthelyezheti a tételeket másik napra (az emlékeztetők is eltolódnak). A jogi határidőt a lezáráskor számolt ciklus adja – azt a tétel részleteiben lehet felülírni.</span></div>}
+    </div>
+  );
+  const detail = sel ? data.tasks.find(x => x.id === sel) : undefined;
+  return <>
+    <TopBar title="Naptár" sub={layout === "desktop" ? `${tasks.filter(x => x.status === "open").length} nyitott tétel` : undefined} actions={layout !== "phone" ? <button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Új</button> : undefined} />
+    {layout === "phone" ? main : <div className="split wide"><div className="pane">{main}</div><div className="pane detail">{detail ? <div className="inner"><TaskDetail t={detail} onDone={() => set({ t: null })} /></div> : <div className="inner"><div className="sec" style={{ marginTop: 0 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div><div style={{ marginTop: 10 }}>{dayEl}</div></div>}</div></div>}
+  </>;
+}
