@@ -5,6 +5,7 @@ import "@fontsource/instrument-sans/500.css";
 import "@fontsource/instrument-sans/600.css";
 import "@fontsource/instrument-sans/700.css";
 import "./globals.css";
+import "./styles/invoices.css";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL || "https://benade.vercel.app";
 
@@ -24,7 +25,7 @@ export const viewport: Viewport = {
   width: "device-width", initialScale: 1, viewportFit: "cover",
 };
 
-const themeInit = `try{var t=localStorage.getItem('benade.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+const themeInit = `try{var t=localStorage.getItem('benade.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('benade.textsize')==='lg')document.documentElement.setAttribute('data-textsize','lg')}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

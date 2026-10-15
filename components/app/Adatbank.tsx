@@ -1,13 +1,13 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { Driver, Vehicle } from "@/lib/types";
+import type { Driver, Snapshot, Vehicle } from "@/lib/types";
 import { fmtDate, relLabel } from "@/lib/date";
 import { initials, plateFmt, titleCase } from "@/lib/format";
 import { useData, useMutate } from "@/lib/data";
-import { Empty, Field, Icon, Panel, Seg, Skeleton, useConfirm } from "@/components/ui";
+import { Empty, Field, Icon, Panel, Seg, Skeleton, Switch, useConfirm } from "@/components/ui";
 import { TopBar, useShell, useUrlState } from "./Shell";
-import { CompanyList, CompanyProfile, firstCompanyId } from "./Customers";
+import { CompanyList, CompanyProfile, HuPlate, firstCompanyId } from "./Customers";
 import { DriverForm, VehicleForm } from "./Capture";
 
 type View = "cegek" | "soforok" | "jarmuvek";
@@ -49,6 +49,22 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
   const nextFor = (id: string) => data.tasks.filter(t => t.status === "open" && (isV ? t.vehicle_id === id && t.type === "vu_download" : t.driver_id === id && t.type === "card_download")).sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
   const lastFor = (id: string) => data.tasks.filter(t => t.status === "done" && (isV ? t.vehicle_id === id && t.type === "vu_download" : t.driver_id === id && t.type === "card_download")).sort((a, b) => (b.done_at || "").localeCompare(a.done_at || ""))[0];
   const preview = isV ? plateFmt(val) : titleCase(val);
+  const [bulk, setBulk] = useState(false); const [bulkText, setBulkText] = useState("");
+  const bulkItems = useMemo(() => parseBulk(bulkText, isV, data, cid), [bulkText, isV, data, cid]);
+  const bulkOk = bulkItems.filter(b => b.st === "ok");
+  const noun = isV ? "jármű" : "gépkocsivezető";
+
+  async function addBulk(e: React.FormEvent) {
+    e.preventDefault(); setErr(null);
+    if (!cid) return setErr("Előbb válassza ki a céget.");
+    if (!bulkOk.length) return setErr(isV ? "Nincs új, érvényes rendszám a listában." : "Nincs új, érvényes név a listában.");
+    setBusy(true);
+    try {
+      const rows = bulkOk.map(b => b.val);
+      await mutate(async r => { for (const v of rows) { if (isV) await r.vehicle.create({ company_id: cid, plate: v }); else await r.driver.create({ company_id: cid, name: v }); } }, { success: `${rows.length} ${noun} rögzítve` });
+      setBulkText("");
+    } finally { setBusy(false); }
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault(); setErr(null);
@@ -70,7 +86,7 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
   };
 
   const form = (
-    <form className="card pad dbform" onSubmit={add} noValidate>
+    <form className="card pad dbform" onSubmit={bulk ? addBulk : add} noValidate>
       <Field label="Cég kiválasztása" id="db-c">
         <select className="ctl" id="db-c" value={cid} onChange={e => { set({ cid: e.target.value || null }, true); setErr(null); }}>
           <option value="">Minden cég</option>
@@ -78,6 +94,21 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
         </select>
       </Field>
       {companies.length === 0 ? <div className="info">{Icon.info()}<span>Még nincs cég. <button type="button" className="btn quiet sm" onClick={() => openCapture("company")}>Új cég rögzítése</button></span></div> : <>
+        <label className="bulktoggle"><span><b>Több egyszerre</b><i>{isV ? "Rendszámok listája beillesztéssel" : "Nevek listája beillesztéssel"}</i></span><Switch checked={bulk} onChange={v => { setBulk(v); setErr(null); }} label="Több egyszerre" /></label>
+        {bulk ? <>
+          <Field label={isV ? "Rendszámok" : "Gépkocsivezetők nevei"} id="db-bulk" hint="Vesszővel, pontosvesszővel vagy új sorral elválasztva.">
+            <textarea className={`ctl bulkta ${isV ? "mono" : ""}`} id="db-bulk" rows={5} value={bulkText} disabled={!cid} onChange={e => setBulkText(e.target.value)} placeholder={cid ? (isV ? "ABC-123, DEF-456\nAA BC-789" : "Kovács János\nNagy Péter, Szabó Anna") : "Előbb válasszon céget"} autoCapitalize={isV ? "characters" : "words"} spellCheck={false} />
+          </Field>
+          {bulkItems.length > 0 && <div className="bulkprev" aria-live="polite">
+            <div className="sum"><span className="ok">{bulkOk.length} új</span>{bulkItems.some(b => b.st === "dup") && <span className="warn">{bulkItems.filter(b => b.st === "dup").length} ismétlődik</span>}{bulkItems.some(b => b.st === "exists") && <span className="warn">{bulkItems.filter(b => b.st === "exists").length} már szerepel</span>}{bulkItems.some(b => b.st === "invalid") && <span className="bad">{bulkItems.filter(b => b.st === "invalid").length} érvénytelen</span>}</div>
+            <ul>{bulkItems.map((b, i) => <li key={i} className={`st-${b.st}`}>
+              {isV && b.st !== "invalid" ? <HuPlate plate={b.val} size="sm" /> : <span className={`nm ${isV ? "mono" : ""}`}>{b.val || b.raw}</span>}
+              <span className="tag">{b.note}</span>
+            </li>)}</ul>
+          </div>}
+          {err && <div className="ferr" role="alert">{err}</div>}
+          <button className="btn primary block" type="submit" disabled={busy || !cid || !bulkOk.length}>{Icon.plus(18)} {bulkOk.length ? `${bulkOk.length} ${noun} rögzítése` : isV ? "Járművek rögzítése" : "Gépkocsivezetők rögzítése"}</button>
+        </> : <>
         <Field label={isV ? "Rendszám" : "Gépkocsivezető neve"} id="db-v" hint={isV ? "Mindig nagybetűvel kerül rögzítésre (pl. ABC-123)." : "Minden szó nagybetűvel kezdődik (pl. Példa Péter)."}>
           <input className={`ctl ${isV ? "mono plate-in" : ""}`} id="db-v" value={val} disabled={!cid} onChange={e => setVal(isV ? e.target.value.toUpperCase() : e.target.value)} onBlur={() => val && setVal(preview)} placeholder={cid ? (isV ? "Pl. ABC-123" : "Pl. Kovács János") : "Előbb válasszon céget"} autoCapitalize={isV ? "characters" : "words"} autoComplete="off" />
         </Field>
@@ -86,6 +117,7 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
         </Field>
         {err && <div className="ferr" role="alert">{err}</div>}
         <button className="btn primary block" type="submit" disabled={busy || !cid}>{Icon.plus(18)} {isV ? "Jármű rögzítése" : "Gépkocsivezető rögzítése"}</button>
+        </>}
       </>}
     </form>
   );
@@ -116,4 +148,33 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
       {edit && (isV ? <VehicleForm editId={edit} onDone={() => setEdit(null)} /> : <DriverForm editId={edit} onDone={() => setEdit(null)} />)}
     </Panel>
   </>;
+}
+
+/* ---------- tömeges rögzítés: beillesztett lista elemzése ---------- */
+type BulkItem = { raw: string; val: string; st: "ok" | "dup" | "exists" | "invalid"; note: string };
+const PLATE_RUN = /^([A-Z]{3}-?\d{3})(\s+[A-Z]{3}-?\d{3})+$/i;
+function parseBulk(text: string, isV: boolean, data: Snapshot, cid: string): BulkItem[] {
+  let parts = text.split(/[\n,;\t]+/).map(s => s.trim()).filter(Boolean);
+  if (isV) parts = parts.flatMap(p => (PLATE_RUN.test(p) ? p.split(/\s+/) : [p]));
+  const seen = new Set<string>();
+  const plates = new Map(data.vehicles.map(v => [v.plate.toUpperCase().replace(/[^A-Z0-9]/g, ""), v]));
+  const cname = (id: string) => data.companies.find(c => c.id === id)?.name || "másik cég";
+  return parts.slice(0, 200).map(raw => {
+    if (isV) {
+      const val = plateFmt(raw); const key = val.replace(/[^A-Z0-9]/g, "");
+      const valid = key.length >= 4 && key.length <= 10 && /[A-Z]/.test(key) && /\d/.test(key) && key.length === val.replace(/[\s-]/g, "").length;
+      if (!valid) return { raw, val, st: "invalid", note: "érvénytelen rendszám" };
+      if (seen.has(key)) return { raw, val, st: "dup", note: "ismétlődik" };
+      seen.add(key);
+      const ex = plates.get(key); if (ex) return { raw, val, st: "exists", note: `már szerepel (${cname(ex.company_id)})` };
+      return { raw, val, st: "ok", note: "új" };
+    }
+    const val = titleCase(raw); const key = val.toLocaleLowerCase("hu");
+    const valid = /^[\p{L}][\p{L} .'-]*[\p{L}.]$/u.test(val) && val.replace(/[^\p{L}]/gu, "").length >= 3 && val.length <= 80;
+    if (!valid) return { raw, val, st: "invalid", note: "érvénytelen név" };
+    if (seen.has(key)) return { raw, val, st: "dup", note: "ismétlődik" };
+    seen.add(key);
+    if (cid && data.drivers.some(d => d.company_id === cid && d.name.toLocaleLowerCase("hu") === key)) return { raw, val, st: "exists", note: "már szerepel ennél a cégnél" };
+    return { raw, val, st: "ok", note: "új" };
+  });
 }

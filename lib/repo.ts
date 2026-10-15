@@ -12,7 +12,7 @@ export interface Repo {
   readonly mode: "supabase" | "demo";
   load(): Promise<Snapshot>;
   subscribe(onChange: () => void): () => void;
-  company: { create(d: Partial<Company> & { name: string }): Promise<Company>; update(id: string, p: Partial<Company>): Promise<void>; remove(id: string): Promise<void> };
+  company: { create(d: Partial<Company> & { name: string }): Promise<Company>; update(id: string, p: Partial<Company>): Promise<void>; remove(id: string): Promise<void>; /** Ügyfélportál link: token beállítása (null = visszavonás). */ setPortalToken(id: string, token: string | null): Promise<void> };
   contact: { create(d: Partial<Contact> & { company_id: string; name: string }): Promise<Contact>; update(id: string, p: Partial<Contact>): Promise<void>; remove(id: string): Promise<void> };
   vehicle: { create(d: Partial<Vehicle> & { company_id: string; plate: string }): Promise<Vehicle>; update(id: string, p: Partial<Vehicle>): Promise<void>; remove(id: string): Promise<void> };
   driver: { create(d: Partial<Driver> & { company_id: string; name: string }): Promise<Driver>; update(id: string, p: Partial<Driver>): Promise<void>; remove(id: string): Promise<void> };
@@ -31,6 +31,9 @@ export interface Repo {
   activity(limit?: number, entityId?: string): Promise<Activity[]>;
   importRows(rows: ImportRow[]): Promise<{ companies: number; vehicles: number; drivers: number; tasks: number }>;
 }
+
+/** Company row as loaded from the DB, including the optional customer-portal token (migration_portal.sql). */
+export type PortalCompany = Company & { portal_token?: string | null };
 
 export interface ImportRow { company: string; taxId?: string; plate?: string; driver?: string; lastVu?: string; lastCard?: string; phone?: string; }
 
@@ -85,7 +88,7 @@ export class SupabaseRepo implements Repo {
   private async upd(table: string, id: string, p: Record<string, unknown>) { const { error } = await this.sb.from(table).update(p).eq("id", id); if (error) throw error; }
   private async del(table: string, id: string) { const { error } = await this.sb.from(table).delete().eq("id", id); if (error) throw error; }
 
-  company = { create: (d: Partial<Company> & { name: string }) => this.ins<Company>("companies", d), update: (id: string, p: Partial<Company>) => this.upd("companies", id, p), remove: (id: string) => this.del("companies", id) };
+  company = { create: (d: Partial<Company> & { name: string }) => this.ins<Company>("companies", d), update: (id: string, p: Partial<Company>) => this.upd("companies", id, p), remove: (id: string) => this.del("companies", id), setPortalToken: (id: string, token: string | null) => this.upd("companies", id, { portal_token: token }) };
   contact = { create: (d: Partial<Contact> & { company_id: string; name: string }) => this.ins<Contact>("contacts", d), update: (id: string, p: Partial<Contact>) => this.upd("contacts", id, p), remove: (id: string) => this.del("contacts", id) };
   vehicle = { create: (d: Partial<Vehicle> & { company_id: string; plate: string }) => this.ins<Vehicle>("vehicles", d), update: (id: string, p: Partial<Vehicle>) => this.upd("vehicles", id, p), remove: (id: string) => this.del("vehicles", id) };
   driver = { create: (d: Partial<Driver> & { company_id: string; name: string }) => this.ins<Driver>("drivers", d), update: (id: string, p: Partial<Driver>) => this.upd("drivers", id, p), remove: (id: string) => this.del("drivers", id) };
@@ -154,6 +157,7 @@ export class DemoRepo implements Repo {
   company = {
     create: async (d: Partial<Company> & { name: string }) => { const c = { ...this.rowBase(), tags: [], ...d } as Company; this.s.companies.push(c); this.log("companies", c.id, "insert"); this.save(); return c; },
     update: async (id: string, p: Partial<Company>) => { Object.assign(this.s.companies.find(x => x.id === id)!, p, { updated_at: nowIso() }); this.log("companies", id, "update"); this.save(); },
+    setPortalToken: async (id: string, token: string | null) => { const c = this.s.companies.find(x => x.id === id) as PortalCompany | undefined; if (c) { c.portal_token = token; c.updated_at = nowIso(); } this.save(); },
     remove: async (id: string) => { this.s.companies = this.s.companies.filter(x => x.id !== id); this.s.vehicles = this.s.vehicles.filter(x => x.company_id !== id); this.s.drivers = this.s.drivers.filter(x => x.company_id !== id); this.s.tasks = this.s.tasks.filter(x => x.company_id !== id); this.s.contacts = this.s.contacts.filter(x => x.company_id !== id); this.save(); },
   };
   contact = {

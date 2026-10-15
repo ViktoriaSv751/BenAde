@@ -18,9 +18,23 @@ function Realtime({ repo }: { repo: Repo }) {
   return null;
 }
 
+const SNAP_KEY = "benade.snap.v1";
+function readCached(): Snapshot | undefined { try { const raw = localStorage.getItem(SNAP_KEY); return raw ? JSON.parse(raw) as Snapshot : undefined; } catch { return undefined; } }
+export function clearCachedSnapshot() { try { localStorage.removeItem(SNAP_KEY); } catch {} }
+/** Snapshot with instant start: the last known state is shown at once, fresh data follows. */
 export function useSnapshot() {
-  const repo = useRepo();
-  return useQuery({ queryKey: ["snapshot"], queryFn: () => repo.load() });
+  const repo = useRepo(); const cache = repo.mode === "supabase"; const qc = useQueryClient();
+  useEffect(() => { if (!cache || qc.getQueryData(["snapshot"])) return; const c = readCached(); if (c) qc.setQueryData(["snapshot"], (cur: Snapshot | undefined) => cur || c); }, [cache, qc]);
+  return useQuery({
+    queryKey: ["snapshot"],
+    queryFn: async () => { const s = await repo.load(); if (cache) { try { localStorage.setItem(SNAP_KEY, JSON.stringify(s)); } catch {} } return s; },
+  });
+}
+/** Online / offline state for the small status pill. */
+export function useOnline() {
+  const [on, setOn] = useState(true);
+  useEffect(() => { const u = () => setOn(navigator.onLine); u(); window.addEventListener("online", u); window.addEventListener("offline", u); return () => { window.removeEventListener("online", u); window.removeEventListener("offline", u); }; }, []);
+  return on;
 }
 export function useData(): Snapshot | undefined { return useSnapshot().data; }
 
@@ -32,6 +46,18 @@ export function useMutate() {
     if (opts?.optimistic && prev) qc.setQueryData(["snapshot"], opts.optimistic(structuredClone(prev)));
     try { const r = await fn(repo); if (opts?.success) toast(opts.success, "ok"); await qc.invalidateQueries({ queryKey: ["snapshot"] }); return r; }
     catch (e) { if (prev) qc.setQueryData(["snapshot"], prev); const msg = (e as { message?: string })?.message || "Ismeretlen hiba"; toast(/network|fetch/i.test(msg) ? "Nincs kapcsolat – a módosítás nem mentődött." : "Hiba: " + msg, "err"); throw e; }
+  }, [qc, repo, toast]);
+}
+
+/** Delete with a 6 s undo window: hides the item at once, commits only if not undone. */
+export function useUndoableRemove() {
+  const qc = useQueryClient(); const repo = useRepo(); const toast = useToast();
+  return useCallback((label: string, hide: (s: Snapshot) => Snapshot, commit: (r: Repo) => Promise<unknown>) => {
+    const prev = qc.getQueryData<Snapshot>(["snapshot"]);
+    if (prev) qc.setQueryData(["snapshot"], hide(structuredClone(prev)));
+    let undone = false;
+    const timer = setTimeout(async () => { if (undone) return; try { await commit(repo); } catch { if (prev) qc.setQueryData(["snapshot"], prev); toast("A törlés nem sikerült.", "err"); } finally { qc.invalidateQueries({ queryKey: ["snapshot"] }); } }, 6000);
+    toast(label, "", { label: "Visszavonás", fn: () => { undone = true; clearTimeout(timer); qc.invalidateQueries({ queryKey: ["snapshot"] }); } });
   }, [qc, repo, toast]);
 }
 

@@ -33,6 +33,19 @@ export function Empty({ icon, title, text, action }: { icon?: React.ReactNode; t
 }
 export function Skeleton({ h = 64, n = 3 }: { h?: number; n?: number }) { return <div className="list">{Array.from({ length: n }).map((_, i) => <div key={i} className="skel" style={{ height: h }} />)}</div>; }
 
+/** Number that rolls to its new value (respects reduced motion). */
+export function CountUp({ value, format = (n: number) => String(n) }: { value: number; format?: (n: number) => string }) {
+  const [shown, setShown] = useState(value); const from = useRef(value);
+  useEffect(() => {
+    const start = from.current; if (start === value) return; const reduce = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setShown(value); from.current = value; return; }
+    const t0 = performance.now(); const dur = 420; let raf = 0;
+    const step = (now: number) => { const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3); setShown(Math.round(start + (value - start) * e)); if (p < 1) raf = requestAnimationFrame(step); else from.current = value; };
+    raf = requestAnimationFrame(step); return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{format(shown)}</>;
+}
+
 /* ---------- panel (side panel / bottom sheet) ---------- */
 export function Panel({ open, onClose, title, children, footer, wide, back }: { open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; back?: () => void }) {
   const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), []);

@@ -2,36 +2,67 @@
 import { useRef, useState } from "react";
 import type { Task } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
-import { fmtDate, relLabel, timeOf } from "@/lib/date";
-import { useSubject, useMutate, useToast } from "@/lib/data";
+import { fmtDate, relLabel, timeOf, todayISO } from "@/lib/date";
+import { phoneHref } from "@/lib/format";
+import { useData, useMutate, useSubject, useToast } from "@/lib/data";
 import { Icon, TypeIcon } from "@/components/ui";
 import { useShell } from "./Shell";
 
-export function TaskRow({ t, selected, compact, onOpen, swipe = false }: { t: Task; selected?: boolean; compact?: boolean; onOpen?: () => void; swipe?: boolean }) {
-  const subject = useSubject(); const meta = TASK_META[t.type]; const rel = relLabel(t.due_at); const done = t.status !== "open";
-  const { openTask, touch } = useShell(); const mutate = useMutate(); const toast = useToast();
-  const [dx, setDx] = useState(0); const start = useRef<{ x: number; y: number } | null>(null); const [drag, setDrag] = useState(false);
-  const open = onOpen || (() => openTask(t.id));
-  const complete = () => mutate(r => r.task.complete(t.id), { optimistic: s => { const x = s.tasks.find(y => y.id === t.id); if (x) x.status = "done"; return s; } }).then(() => toast("Elvégezve", "ok", { label: "Visszavonás", fn: () => mutate(r => r.task.reopen(t.id)) }));
-  const snooze = () => mutate(r => r.task.snooze(t.id, 1), { success: "Emlékeztető holnapra halasztva" });
-  const onTS = (e: React.TouchEvent) => { if (!swipe || !touch || done) return; start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; setDrag(true); };
-  const onTM = (e: React.TouchEvent) => { if (!start.current) return; const dx = e.touches[0].clientX - start.current.x; const dy = e.touches[0].clientY - start.current.y; if (Math.abs(dy) > Math.abs(dx)) { start.current = null; setDx(0); return; } setDx(Math.max(-120, Math.min(120, dx))); };
-  const onTE = () => { if (!start.current) { setDrag(false); return; } const v = dx; start.current = null; setDrag(false); setDx(0); if (v < -80) complete(); else if (v > 80) snooze(); };
-  const body = (
-    <button className={`trow ${meta.cls} ${done ? "done" : ""} ${compact ? "compact" : ""}`} aria-selected={selected} onClick={open} style={dx ? { transform: `translateX(${dx}px)`, transition: drag ? "none" : "transform .2s" } : undefined} onTouchStart={onTS} onTouchMove={onTM} onTouchEnd={onTE}>
-      <span className="ico"><TypeIcon type={t.type} size={compact ? 18 : 22} /></span>
+export function haptic(kind: "ok" | "tap" | "warn" = "tap") {
+  try {
+    const w = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };
+    if (w.Capacitor?.isNativePlatform?.()) { import("@capacitor/haptics").then(m => kind === "ok" ? m.Haptics.notification({ type: m.NotificationType.Success }) : kind === "warn" ? m.Haptics.notification({ type: m.NotificationType.Warning }) : m.Haptics.impact({ style: m.ImpactStyle.Light })).catch(() => {}); return; }
+    navigator.vibrate?.(kind === "ok" ? [12, 40, 18] : 10);
+  } catch { /* ignore */ }
+}
+
+/** One reminder row: tap opens, quick buttons complete / call / snooze, long-press selects. */
+export function TaskRow({ t, selected, compact, onOpen, selectMode, checked, onToggle, onLongPress, actions = true }: {
+  t: Task; selected?: boolean; compact?: boolean; onOpen?: () => void; swipe?: boolean;
+  selectMode?: boolean; checked?: boolean; onToggle?: () => void; onLongPress?: () => void; actions?: boolean;
+}) {
+  const data = useData(); const subject = useSubject(); const meta = TASK_META[t.type]; const rel = relLabel(t.due_at); const done = t.status !== "open";
+  const { openTask } = useShell(); const mutate = useMutate(); const toast = useToast();
+  const [leaving, setLeaving] = useState(false); const [menu, setMenu] = useState(false);
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null); const long = useRef(false);
+  const company = data?.companies.find(c => c.id === t.company_id);
+  const phone = t.type === "training" ? (t.contact_phone || company?.phone) : (data?.contacts.find(c => c.company_id === t.company_id && c.is_primary)?.phone || company?.phone);
+  const overdue = !done && t.due_at.slice(0, 10) < todayISO();
+  const open = () => { if (long.current) { long.current = false; return; } if (selectMode) onToggle?.(); else (onOpen || (() => openTask(t.id)))(); };
+  const complete = (e: React.MouseEvent) => {
+    e.stopPropagation(); haptic("ok"); setLeaving(true);
+    setTimeout(() => {
+      const isInv = t.type === "invoice";
+      mutate(r => isInv ? r.task.update(t.id, { paid_at: todayISO(), status: "done", done_at: new Date().toISOString() }) : r.task.complete(t.id), { optimistic: s => { const x = s.tasks.find(y => y.id === t.id); if (x) { x.status = "done"; x.done_at = new Date().toISOString(); if (isInv) x.paid_at = todayISO(); } return s; } })
+        .then(() => toast(isInv ? "Kifizetve" : meta.cycleKey ? "Elvégezve · új ciklus létrehozva" : "Elvégezve", "ok", { label: "Visszavonás", fn: () => mutate(r => isInv ? r.task.update(t.id, { paid_at: null, status: "open", done_at: null }) : r.task.reopen(t.id)) }))
+        .catch(() => setLeaving(false));
+    }, 260);
+  };
+  const snooze = (days: number) => { setMenu(false); haptic(); mutate(r => r.task.snooze(t.id, days), { success: days === 1 ? "Holnapra halasztva" : `${days} nappal halasztva` }); };
+  const startPress = () => { if (!onLongPress) return; long.current = false; press.current = setTimeout(() => { long.current = true; haptic(); onLongPress(); }, 480); };
+  const endPress = () => { if (press.current) clearTimeout(press.current); };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+  return (
+    <div role="button" tabIndex={0} aria-pressed={selectMode ? !!checked : undefined}
+      className={`trow ${meta.cls} ${done ? "done" : ""} ${compact ? "compact" : ""} ${overdue ? "is-over" : ""} ${leaving ? "leaving" : ""} ${selectMode ? "selecting" : ""} ${checked ? "checked" : ""}`}
+      aria-selected={selected} onClick={open} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
+      onTouchStart={startPress} onTouchEnd={endPress} onTouchMove={endPress} onMouseDown={startPress} onMouseUp={endPress} onMouseLeave={endPress} onContextMenu={e => { if (onLongPress) e.preventDefault(); }}>
+      {selectMode ? <span className="sel" aria-hidden>{checked ? Icon.check(16) : null}</span> : <span className="ico"><TypeIcon type={t.type} size={compact ? 18 : 22} /></span>}
       <span className="body">
-        <span className="when"><span>{fmtDate(t.due_at)}</span>{!t.all_day && <span className="t">{timeOf(t.due_at)}</span>}</span>
-        <span className="name" style={{ display: "block" }}>{meta.name}</span>
-        <span className="meta" style={{ display: "block" }}>{subject(t)}</span>
-        {t.note && !compact && <span className="note" style={{ display: "block" }}>Megj.: {t.note}</span>}
+        <span className="when"><span>{fmtDate(t.due_at)}</span>{!t.all_day && <span className="t">{timeOf(t.due_at)}</span>}{done ? <span className="st ok">{t.type === "invoice" ? "Kifizetve" : "Kész"}</span> : <span className={`st ${rel.tone}`}>{rel.text}</span>}</span>
+        <span className="name">{meta.name}</span>
+        <span className="meta">{subject(t)}</span>
+        {t.note && !compact && <span className="note">Megj.: {t.note}</span>}
+        {t.type === "invoice" && !done && !compact && <span className="unpaid">Nincs kifizetve</span>}
       </span>
-      <span className="right">
-        {done ? <span className="badge ok">{t.type === "invoice" ? "Kifizetve" : "Kész"}</span> : <span className={`badge ${rel.tone}`}>{rel.text}</span>}
-        {t.type === "invoice" && !done && !compact && <span className="badge plain" style={{ fontSize: 10.5 }}>nincs kifizetve</span>}
-      </span>
-    </button>
+      {actions && !done && !selectMode && (
+        <span className="qa" onClick={stop} onMouseDown={stop} onTouchStart={stop}>
+          {phone && !compact && <a className="qb" href={phoneHref(phone)} aria-label="Hívás" title="Hívás">{Icon.phone(17)}</a>}
+          {!compact && <span className="qwrap"><button type="button" className="qb" aria-label="Halasztás" title="Halasztás" onClick={() => setMenu(m => !m)}>{Icon.snooze(17)}</button>
+            {menu && <span className="qmenu" role="menu"><button role="menuitem" onClick={() => snooze(1)}>Holnapra</button><button role="menuitem" onClick={() => snooze(3)}>3 nappal</button><button role="menuitem" onClick={() => snooze(7)}>1 héttel</button></span>}</span>}
+          <button type="button" className="qb done" aria-label={t.type === "invoice" ? "Kifizetve" : "Elvégezve"} title={t.type === "invoice" ? "Kifizetve" : "Elvégezve"} onClick={complete}>{Icon.check(18)}</button>
+        </span>
+      )}
+    </div>
   );
-  if (!swipe || !touch || done) return body;
-  return <div className="swipe"><div className="under" style={{ background: dx < 0 ? "var(--ok)" : dx > 0 ? "var(--time)" : "transparent" }}><span className="l">{Icon.snooze(18)} Holnap</span><span className="r">Elvégezve {Icon.check(18)}</span></div>{body}</div>;
 }

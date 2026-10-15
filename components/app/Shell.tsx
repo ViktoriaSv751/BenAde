@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLayout, type Layout } from "@/lib/layout";
-import { useData, useTheme } from "@/lib/data";
+import { useData, useMutate, useOnline, useTheme, useToast } from "@/lib/data";
 import { Icon } from "@/components/ui";
 import { todayISO } from "@/lib/date";
 import type { Role } from "@/lib/types";
@@ -54,12 +54,32 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   const openTask = useCallback((id: string) => set({ t: id }), [set]);
   const openSearch = useCallback(() => setSearch(true), []);
   useEffect(() => { document.body.dataset.layout = layout; return () => { delete document.body.dataset.layout; }; }, [layout]);
+  const online = useOnline(); const mutate = useMutate(); const toast = useToast(); const router = useRouter();
+  const [plusMenu, setPlusMenu] = useState(false); const plusTimer = useRef<ReturnType<typeof setTimeout> | null>(null); const plusLong = useRef(false);
+  // actions coming from a notification button: ?t=<id>&do=done|tomorrow
+  useEffect(() => { const act = get("do"), id = get("t"); if (!act || !id || !data) return; const x = data.tasks.find(y => y.id === id); set({ do: null, t: act === "open" ? id : null }, true); if (!x || x.status !== "open") return;
+    if (act === "done") mutate(r => x.type === "invoice" ? r.task.update(id, { paid_at: todayISO(), status: "done", done_at: new Date().toISOString() }) : r.task.complete(id)).then(() => toast("Elvégezve az értesítésből", "ok", { label: "Visszavonás", fn: () => mutate(r => r.task.reopen(id)) }));
+    if (act === "tomorrow") mutate(r => r.task.snooze(id, 1), { success: "Holnapra halasztva" }); }, [get, set, data, mutate, toast]);
+
   useEffect(() => { const k = (e: KeyboardEvent) => { const tag = (e.target as HTMLElement)?.tagName; const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable; if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearch(s => !s); } if (!typing && !e.metaKey && !e.ctrlKey) { if (e.key === "n" || e.key === "N") { e.preventDefault(); openCapture(); } if (e.key === "/") { e.preventDefault(); setSearch(true); } } }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [openCapture]);
   const due = useMemo(() => data ? data.tasks.filter(t => t.status === "open" && t.due_at.slice(0, 10) <= todayISO()).length : 0, [data]);
   const unread = useMemo(() => data ? data.notifications.filter(n => n.status !== "opened").length : 0, [data]);
+  useEffect(() => { const n = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> }; try { if (due > 0) n.setAppBadge?.(due).catch(() => {}); else n.clearAppBadge?.().catch(() => {}); } catch {} }, [due]);
+  // desktop keyboard: J/K move between rows, E completes the focused row, ? opens help
+  useEffect(() => { const k = (e: KeyboardEvent) => { const el = e.target as HTMLElement; if (el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || el?.tagName === "SELECT" || el?.isContentEditable || e.metaKey || e.ctrlKey || e.altKey) return;
+      const rows = [...document.querySelectorAll<HTMLElement>(".main .trow")]; const i = rows.indexOf(document.activeElement as HTMLElement);
+      if (e.key === "j" || e.key === "J") { e.preventDefault(); rows[Math.min(rows.length - 1, i + 1)]?.focus(); }
+      else if (e.key === "k" || e.key === "K") { e.preventDefault(); rows[Math.max(0, i - 1)]?.focus(); }
+      else if ((e.key === "e" || e.key === "E") && i >= 0) { e.preventDefault(); rows[i].querySelector<HTMLButtonElement>(".qb.done")?.click(); }
+      else if (e.key === "?") { e.preventDefault(); router.push(`${base}/sugo`); } };
+    window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [router, base]);
   const ctx: ShellCtx = useMemo(() => ({ layout, touch, role: data?.role || "viewer", email, name, demo, signOut, openCapture, openTask, openSearch }), [layout, touch, data?.role, email, name, demo, signOut, openCapture, openTask, openSearch]);
   const isActive = (href: string, also: string[] = []) => { const h = href.replace("/app", base); if (href === "/app") return path === base; return path.startsWith(h) || also.some(a => path.startsWith(a.replace("/app", base))); };
   const hrefOf = (href: string) => href.replace("/app", base);
+  const scrollTop = (href: string, also: string[] = []) => { if (!isActive(href, also)) return; document.querySelectorAll<HTMLElement>(".main .content, .main .pane").forEach(el => el.scrollTo({ top: 0, behavior: "smooth" })); };
+  const plusDown = () => { plusLong.current = false; plusTimer.current = setTimeout(() => { plusLong.current = true; navigator.vibrate?.(10); setPlusMenu(true); }, 420); };
+  const plusUp = () => { if (plusTimer.current) clearTimeout(plusTimer.current); };
+  const quick = (k: string) => { setPlusMenu(false); openCapture(k); };
 
   return (
     <Ctx.Provider value={ctx}>
@@ -75,6 +95,7 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
               <nav className="nav">
                 {layout === "desktop" && <Link href={hrefOf("/app/csapat")} aria-current={isActive("/app/csapat") ? "page" : undefined}>{Icon.team(20)}<span>Csapat</span></Link>}
                 <Link href={hrefOf("/app/beallitasok")} aria-current={isActive("/app/beallitasok") ? "page" : undefined}>{Icon.gear(20)}<span>Beállítások</span></Link>
+                <Link href={hrefOf("/app/sugo")} aria-current={isActive("/app/sugo") ? "page" : undefined}>{Icon.info(20)}<span>Súgó</span></Link>
               </nav>
               <ThemeToggle />
               <Link href={hrefOf("/app/profil")} className="user" aria-current={isActive("/app/profil") ? "page" : undefined} title="Profil"><span className="avatar" style={{ width: 34, height: 34, borderRadius: 11 }}>{initials(name || email)}</span><div style={{ minWidth: 0 }}><div className="nm">{name || "Profil"}</div><div className="em">{data?.workspace.name || email}</div></div>{layout === "desktop" && <span style={{ marginLeft: "auto", color: "var(--faint)" }}>{Icon.chev(16)}</span>}</Link>
@@ -84,11 +105,15 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
         <div className="main">{children}</div>
         {layout === "phone" && (
           <nav className="tabbar" aria-label="Fő menü">
-            {TABS.slice(0, 2).map(n => <Link key={n.href} href={hrefOf(n.href)} aria-current={isActive(n.href, n.also) ? "page" : undefined}>{n.icon(23)}{n.label}{n.href === "/app" && due > 0 && <span className="cnt">{due}</span>}</Link>)}
-            <button className="plus" onClick={() => openCapture()} aria-label="Új rögzítés">{Icon.plus(26)}</button>
-            {TABS.slice(2).map(n => <Link key={n.href} href={hrefOf(n.href)} aria-current={isActive(n.href, n.also) ? "page" : undefined}>{n.icon(23)}{n.label}</Link>)}
+            {TABS.slice(0, 2).map(n => <Link key={n.href} href={hrefOf(n.href)} onClick={() => scrollTop(n.href, n.also)} aria-current={isActive(n.href, n.also) ? "page" : undefined}>{n.icon(23)}{n.label}{n.href === "/app" && due > 0 && <span className="cnt">{due}</span>}</Link>)}
+            <button className="plus" onClick={() => { if (plusLong.current) { plusLong.current = false; return; } setPlusMenu(false); openCapture(); }} onTouchStart={plusDown} onTouchEnd={plusUp} onMouseDown={plusDown} onMouseUp={plusUp} onMouseLeave={plusUp} onContextMenu={e => e.preventDefault()} aria-label="Új rögzítés (nyomva tartva gyorsmenü)">{Icon.plus(26)}</button>
+            {TABS.slice(2).map(n => <Link key={n.href} href={hrefOf(n.href)} onClick={() => scrollTop(n.href, n.also)} aria-current={isActive(n.href, n.also) ? "page" : undefined}>{n.icon(23)}{n.label}</Link>)}
           </nav>
         )}
+        {plusMenu && <><div className="plusmenu-scrim" onClick={() => setPlusMenu(false)} /><div className="plusmenu" role="menu">
+          {[["vu_download", "Fedélzeti egység", "t-vu", Icon.truck(20)], ["card_download", "Vezetői kártya", "t-card", Icon.card(20)], ["training", "Oktatás", "t-training", Icon.grad(20)], ["invoice", "Számla", "t-invoice", Icon.invoice(20)]].map(([k, l, c, ic]) => <button key={k as string} role="menuitem" className={c as string} onClick={() => quick(k as string)}><span>{ic}</span>{l}</button>)}
+        </div></>}
+        {!online && <div className="netbar" role="status"><i />Offline – a legutóbbi adatokat látja</div>}
         <CapturePanel open={!!get("uj")} type={get("uj") || undefined} onClose={() => set({ uj: null, cid: null, vid: null, did: null, edit: null })} />
         <TaskDetailPanel id={get("t")} onClose={() => set({ t: null })} />
         <SearchPalette open={search} onClose={() => setSearch(false)} />
@@ -109,8 +134,12 @@ export function TopBar({ title, sub, actions, back }: { title: string; sub?: str
   const { layout, openSearch, name, email } = useShell(); const data = useData();
   const unread = data ? data.notifications.filter(n => n.status !== "opened").length : 0;
   const base = useShell().demo ? "/demo" : "/app";
+  const ref = useRef<HTMLElement>(null); const [scrolled, setScrolled] = useState(false);
+  useEffect(() => { const main = ref.current?.parentElement; if (!main) return; let els: HTMLElement[] = []; const on = () => setScrolled(els.some(e => e.scrollTop > 8));
+    const bind = () => { els.forEach(e => e.removeEventListener("scroll", on)); els = [...main.querySelectorAll<HTMLElement>(":scope > .content, :scope > .split > .pane:first-child")]; els.forEach(e => e.addEventListener("scroll", on, { passive: true })); on(); };
+    bind(); const mo = new MutationObserver(bind); mo.observe(main, { childList: true }); return () => { mo.disconnect(); els.forEach(e => e.removeEventListener("scroll", on)); }; }, []);
   return (
-    <header className="topbar">
+    <header className={`topbar ${scrolled ? "scrolled" : ""}`} ref={ref}>
       {back && <Link className="ibtn" href={back} aria-label="Vissza">{Icon.back()}</Link>}
       <div className="grow"><h1>{title}</h1>{sub && <div className="sub">{sub}</div>}</div>
       <div className="acts">

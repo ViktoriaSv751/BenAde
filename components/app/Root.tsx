@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DataProvider, ThemeProvider, ToastProvider } from "@/lib/data";
+import { DataProvider, ThemeProvider, ToastProvider, clearCachedSnapshot } from "@/lib/data";
 import { DemoRepo, SupabaseRepo, type Repo } from "@/lib/repo";
 import { createClient } from "@/lib/supabase/client";
 import { Shell } from "./Shell";
@@ -10,7 +10,7 @@ export function AppRoot({ children, userId, email, name, wsId }: { children: Rea
   const router = useRouter();
   const sb = useMemo(() => createClient(), []);
   const repo = useMemo<Repo>(() => new SupabaseRepo(sb, wsId, userId), [sb, wsId, userId]);
-  const signOut = useCallback(async () => { await sb.auth.signOut(); router.replace("/login"); router.refresh(); }, [sb, router]);
+  const signOut = useCallback(async () => { clearCachedSnapshot(); await sb.auth.signOut(); router.replace("/login"); router.refresh(); }, [sb, router]);
   useEffect(() => { if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {}); }, []);
   useEffect(() => { // native: status bar + register push when already permitted
     const w = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };

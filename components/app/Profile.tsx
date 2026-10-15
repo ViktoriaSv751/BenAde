@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { initials } from "@/lib/format";
 import { useData, useMutate, useTheme } from "@/lib/data";
@@ -14,6 +14,9 @@ export function ProfileView() {
   const data = useData(); const mutate = useMutate(); const { email, name: sname, demo, signOut, role } = useShell(); const { theme, setTheme } = useTheme();
   const base = demo ? "/demo" : "/app";
   const name = data?.profile.full_name || sname || "";
+  const [size, setSizeState] = useState<"md" | "lg">("md");
+  useEffect(() => { try { if (localStorage.getItem("benade.textsize") === "lg") setSizeState("lg"); } catch {} }, []);
+  const setSize = (v: "md" | "lg") => { setSizeState(v); try { localStorage.setItem("benade.textsize", v); } catch {} if (v === "lg") document.documentElement.setAttribute("data-textsize", "lg"); else document.documentElement.removeAttribute("data-textsize"); };
   const [editing, setEditing] = useState(false); const [n, setN] = useState(name);
   const unread = data ? data.notifications.filter(x => x.status !== "opened").length : 0;
   const open = data ? data.tasks.filter(t => t.status === "open") : [];
@@ -52,11 +55,14 @@ export function ProfileView() {
       <div className="pgroup"><div className="ph">Megjelenés</div>
         <div className="prow static"><span className="pi">{theme === "dark" ? Icon.moon(20) : Icon.sun(20)}</span><span style={{ minWidth: 0 }}><div className="n">Téma</div><div className="m">Világos: fehér háttér · Sötét: fekete háttér</div></span></div>
         <div style={{ padding: "0 14px 14px" }}><Seg value={theme} onChange={setTheme} options={[{ value: "light", label: "Világos" }, { value: "dark", label: "Sötét" }, { value: "system", label: "Rendszer" }]} /></div>
+        <div className="prow static"><span className="pi">{Icon.file(20)}</span><span style={{ minWidth: 0 }}><div className="n">Betűméret</div><div className="m">Nagyobb szöveg és gombok minden oldalon</div></span></div>
+        <div style={{ padding: "0 14px 14px" }}><Seg value={size} onChange={setSize} options={[{ value: "md", label: "Normál" }, { value: "lg", label: "Nagy" }]} /></div>
       </div>
       <div className="pgroup"><div className="ph">Jogi és súgó</div>
         {row("/privacy", Icon.shield(20), "Adatkezelési tájékoztató", "Milyen adatot és miért kezelünk", 0, true)}
         {row("/terms", Icon.file(20), "Felhasználási feltételek", "A szolgáltatás szabályai", 0, true)}
-        {row("mailto:hello@benade.hu", Icon.mail(20), "Súgó és visszajelzés", "hello@benade.hu", 0, true)}
+        {row(`${base}/sugo`, Icon.info(20), "Súgó", "Gyakori kérdések, gyorsbillentyűk")}
+        {row(`mailto:hello@benade.hu?subject=${encodeURIComponent("BenAde visszajelzés")}&body=${encodeURIComponent(`\n\n---\nEszköz: ${typeof navigator !== "undefined" ? navigator.userAgent : ""}\nFiók: ${email}`)}`, Icon.mail(20), "Írjon nekünk", "Hiba, ötlet, kérdés – az eszköz adataival", 0, true)}
       </div>
       <button className="btn ghost block" onClick={signOut}>{Icon.logout(17)} {demo ? "Kilépés a tesztfiókból" : "Kijelentkezés"}</button>
       {!demo && <Link className="pdel" href={`${base}/beallitasok#fiok`}>Fiók végleges törlése</Link>}

@@ -6,7 +6,7 @@ import type { Activity, Task } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
 import { dayDiff, fmtDate, fmtDT, relLabel, timeOf, todayISO } from "@/lib/date";
 import { fmtFt, phoneHref } from "@/lib/format";
-import { useData, useMutate, useRepo, useToast } from "@/lib/data";
+import { useData, useMutate, useRepo, useToast, useUndoableRemove } from "@/lib/data";
 import { Icon, Panel, Ring, TypeIcon, useConfirm } from "@/components/ui";
 import { useShell, useUrlState } from "./Shell";
 
@@ -21,8 +21,8 @@ export function TaskDetailPanel({ id, onClose }: { id: string | null; onClose: (
 }
 
 export function TaskDetail({ t, onDone }: { t: Task; onDone?: () => void }) {
-  const data = useData()!; const mutate = useMutate(); const toast = useToast(); const repo = useRepo(); const { set } = useUrlState(); const { demo } = useShell();
-  const { confirm, confirmEl } = useConfirm();
+  const data = useData()!; const mutate = useMutate(); const removeLater = useUndoableRemove(); const toast = useToast(); const repo = useRepo(); const { set } = useUrlState(); const { demo } = useShell();
+  const { confirmEl } = useConfirm();
   const meta = TASK_META[t.type]; const rel = relLabel(t.due_at); const done = t.status !== "open"; const d = dayDiff(t.due_at);
   const company = data.companies.find(c => c.id === t.company_id); const vehicle = data.vehicles.find(v => v.id === t.vehicle_id); const driver = data.drivers.find(x => x.id === t.driver_id);
   const base = t.base_date ? new Date(t.base_date).getTime() : new Date(t.created_at).getTime(); const end = new Date(t.due_at).getTime();
@@ -41,7 +41,7 @@ export function TaskDetail({ t, onDone }: { t: Task; onDone?: () => void }) {
   const pay = async () => { await mutate(r => r.task.update(t.id, { paid_at: todayISO(), status: "done", done_at: new Date().toISOString() }), { success: "Számla kifizetve" }); onDone?.(); };
   const unpay = () => mutate(r => r.task.update(t.id, { paid_at: null, status: "open", done_at: null }));
   const snooze = (days: number) => mutate(r => r.task.snooze(t.id, days), { success: `Emlékeztető ${days === 1 ? "holnapra" : days + " nappal"} halasztva` });
-  const remove = async () => { if (await confirm({ title: "Tétel törlése", text: `${meta.name} – ${company?.name || ""}. A törlés nem vonható vissza.`, okLabel: "Törlés", danger: true })) { await mutate(r => r.task.remove(t.id), { success: "Törölve" }); onDone?.(); } };
+  const remove = () => { removeLater(`${meta.short} törölve`, s => { s.tasks = s.tasks.filter(x => x.id !== t.id); return s; }, r => r.task.remove(t.id)); onDone?.(); };
   const edit = () => set({ uj: t.type, edit: t.id, t: null });
 
   return (

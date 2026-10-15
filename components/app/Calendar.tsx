@@ -35,7 +35,8 @@ export function CalendarView() {
     <div className={`cal ${layout === "phone" ? "compact" : ""}`}>
       <div className="head">{["H", "K", "Sze", "Cs", "P", "Szo", "V"].map(d => <div key={d}>{d}</div>)}</div>
       <div className="grid">{grid.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; const out = dd.getMonth() !== cd.getMonth(); const max = layout === "phone" ? 0 : 3;
-        return <button key={d} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""}`} aria-selected={cursor === d} onClick={() => setCursor(d)} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
+        const open = items.filter(x => x.status === "open").length; const heat = out ? 0 : open >= 6 ? 3 : open >= 3 ? 2 : open >= 1 ? 1 : 0; const wk = dd.getDay() === 0 || dd.getDay() === 6;
+        return <button key={d} data-heat={heat || undefined} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""} ${wk ? "wkend" : ""}`} aria-selected={cursor === d} onClick={() => setCursor(d)} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
           <span className="d">{dd.getDate()}</span>
           {max > 0 && items.slice(0, max).map(x => <span key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && x.due_at.slice(0, 10) < t ? "over" : ""}`} draggable onDragStart={e => { setDrag(x.id); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); set({ t: x.id }); }}>{!x.all_day && <span className="tm">{timeOf(x.due_at)}</span>}<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{subject(x).split(" · ").pop()}</span></span>)}
           {max > 0 && items.length > max && <span className="more">+{items.length - max} további</span>}
@@ -52,7 +53,9 @@ export function CalendarView() {
       </div>; })}</div>
     </div>
   );
-  const dayEl = <div className="list">{dayList.length ? dayList.map(x => <TaskRow key={x.id} t={x} selected={sel === x.id} compact={layout === "desktop"} />) : <Empty icon={Icon.calendar(26)} title="Ezen a napon nincs teendő" action={<button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Rögzítés erre a napra</button>} />}</div>;
+  const stops = [...new Set(dayList.filter(x => x.status === "open").map(x => x.type === "training" && x.address ? x.address : data?.companies.find(c => c.id === x.company_id)?.address).filter(Boolean) as string[])];
+  const routeUrl = stops.length ? `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(stops[stops.length - 1])}${stops.length > 1 ? `&waypoints=${encodeURIComponent(stops.slice(0, -1).join("|"))}` : ""}` : null;
+  const dayEl = <div className="list">{routeUrl && <a className="btn ghost sm" style={{ alignSelf: "flex-start" }} href={routeUrl} target="_blank" rel="noopener">{Icon.pin(15)} Útvonal a nap címeihez ({stops.length})</a>}{dayList.length ? dayList.map(x => <TaskRow key={x.id} t={x} selected={sel === x.id} compact={layout === "desktop"} />) : <Empty icon={Icon.calendar(26)} title="Ezen a napon nincs teendő" action={<button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Rögzítés erre a napra</button>} />}</div>;
 
   const shortTitle = mode === "month" ? `${cd.getFullYear()}. ${MONTHS[cd.getMonth()]}` : mode === "week" ? `${MONTHS[parseISODate(weekDays[0]).getMonth()].slice(0, 3)}. ${parseISODate(weekDays[0]).getDate()}–${parseISODate(weekDays[6]).getDate()}. · ${isoWeek(cursor)}. hét` : fmtLong(cd);
   const phoneWeek = (
