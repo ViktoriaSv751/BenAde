@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Task } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
-import { DAYS_SHORT, addDays, dayDiff, fmtDate, fmtLong, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
+import { DAYS_SHORT, addDays, dayDiff, fmtDate, fmtLong, nowHM, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
 import { fmtFt, initials, phoneHref } from "@/lib/format";
 import { useData, useMutate, useSubject, useToast } from "@/lib/data";
 import { Chips, CountUp, Empty, Icon, PagedList, Ring, Skeleton } from "@/components/ui";
@@ -115,7 +115,7 @@ function smsText(company: string, items: Task[], ws: string, subject: (t: Task) 
   return `Tisztelt ${company}! Emlékeztetjük az esedékes tételekre: ${lines.join("; ")}. Kérjük, egyeztessünk időpontot. Üdvözlettel: ${ws}`;
 }
 function ringPct(t: Task) { const base = t.base_date ? parseISODate(t.base_date).getTime() : new Date(t.created_at).getTime(); const end = new Date(t.due_at).getTime(); return Math.max(4, Math.min(100, Math.round(100 * (Date.now() - base) / Math.max(1, end - base)))); }
-function greet() { const h = new Date().getHours(); return h < 5 ? "Jó éjszakát" : h < 10 ? "Jó reggelt" : h < 18 ? "Jó napot" : "Jó estét"; }
+function greet() { const h = nowHM().h; return h < 5 ? "Jó éjszakát" : h < 10 ? "Jó reggelt" : h < 18 ? "Jó napot" : "Jó estét"; }
 
 function SidePlaceholder({ calls, progress, doneToday, dueToday }: { calls: { c: { id: string; name: string } | undefined; phone?: string | null; who?: string; items: Task[] }[]; progress: number; doneToday: number; dueToday: number }) {
   const { demo } = useShell(); const base = demo ? "/demo" : "/app"; const subject = useSubject();

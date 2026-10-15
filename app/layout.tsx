@@ -1,3 +1,4 @@
+import VersionWatch from "@/components/VersionWatch";
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/jetbrains-mono";
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="hu" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
-      <body>{children}</body>
+      <body>{children}<VersionWatch /></body>
     </html>
   );
 }

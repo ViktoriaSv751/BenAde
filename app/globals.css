@@ -896,3 +896,8 @@ html:has(.auth-page), body:has(.auth-page), .auth-page { background: #000 !impor
   .auth-head h1 { font-size: clamp(28px, min(8.5vw, 4.4dvh), 36px); }
   .auth-links, .auth-legal { text-align: center; justify-content: center; }
 }
+.vbar { position: fixed; z-index: 200; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: #0B0F1A; color: #fff; font-size: 13.5px; font-weight: 700; box-shadow: 0 16px 40px -16px rgba(0,0,0,.6); white-space: nowrap; animation: up .3s ease-out both; }
+.vbar button { background: #3D74FF; color: #fff; font-weight: 800; padding: 8px 14px; border-radius: 999px; }
+@media (min-width: 900px) { .vbar { bottom: 24px; } }
+.portalcard .pexp { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 8px 0 2px; }
+.portalcard .pexp.warn { color: var(--time-fg, var(--fg)); }

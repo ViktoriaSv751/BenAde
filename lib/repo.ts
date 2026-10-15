@@ -33,7 +33,7 @@ export interface Repo {
 }
 
 /** Company row as loaded from the DB, including the optional customer-portal token (migration_portal.sql). */
-export type PortalCompany = Company & { portal_token?: string | null };
+export type PortalCompany = Company & { portal_token?: string | null; portal_expires_at?: string | null };
 
 export interface ImportRow { company: string; taxId?: string; plate?: string; driver?: string; lastVu?: string; lastCard?: string; phone?: string; }
 
@@ -157,7 +157,7 @@ export class DemoRepo implements Repo {
   company = {
     create: async (d: Partial<Company> & { name: string }) => { const c = { ...this.rowBase(), tags: [], ...d } as Company; this.s.companies.push(c); this.log("companies", c.id, "insert"); this.save(); return c; },
     update: async (id: string, p: Partial<Company>) => { Object.assign(this.s.companies.find(x => x.id === id)!, p, { updated_at: nowIso() }); this.log("companies", id, "update"); this.save(); },
-    setPortalToken: async (id: string, token: string | null) => { const c = this.s.companies.find(x => x.id === id) as PortalCompany | undefined; if (c) { c.portal_token = token; c.updated_at = nowIso(); } this.save(); },
+    setPortalToken: async (id: string, token: string | null) => { const c = this.s.companies.find(x => x.id === id) as PortalCompany | undefined; if (c) { c.portal_token = token; c.portal_expires_at = token ? new Date(Date.now() + 365 * 86400000).toISOString() : null; c.updated_at = nowIso(); } this.save(); },
     remove: async (id: string) => { this.s.companies = this.s.companies.filter(x => x.id !== id); this.s.vehicles = this.s.vehicles.filter(x => x.company_id !== id); this.s.drivers = this.s.drivers.filter(x => x.company_id !== id); this.s.tasks = this.s.tasks.filter(x => x.company_id !== id); this.s.contacts = this.s.contacts.filter(x => x.company_id !== id); this.save(); },
   };
   contact = {

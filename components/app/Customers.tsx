@@ -379,11 +379,14 @@ function PortalCard({ c, demo, canEdit }: { c: PortalCompany; demo: boolean; can
   const token = c.portal_token || null; const url = token ? `${origin}${demo ? "/demo" : ""}/p/${token}` : "";
   const create = () => mutate(r => r.company.setPortalToken(c.id, newToken()), { success: "Ügyfélportál link létrehozva" });
   const revoke = async () => { if (await confirm({ title: "Link visszavonása", text: "A jelenlegi link azonnal érvénytelenné válik; aki megkapta, többé nem látja az adatokat. Később új linket hozhat létre.", okLabel: "Visszavonás", danger: true })) await mutate(r => r.company.setPortalToken(c.id, null), { success: "Link visszavonva" }); };
+  const exp = c.portal_expires_at || null; const expDays = exp ? Math.round((new Date(exp).getTime() - Date.now()) / 86400000) : null;
+  const renew = () => mutate(r => r.company.update(c.id, { portal_expires_at: new Date(Date.now() + 365 * 86400000).toISOString() } as Partial<PortalCompany>), { success: "A link még egy évig érvényes" });
   const copy = async () => { try { await navigator.clipboard.writeText(url); toast("Link a vágólapon", "ok"); } catch { toast("A másolás nem sikerült", "err"); } };
   return <div className="card pad portalcard">
     <div className="hd"><span className="ic">{Icon.external(18)}</span><div><h3>Ügyfélportál</h3><p>Csak olvasható oldal az ügyfélnek: határidők, oktatások és nyitott számlák – bejelentkezés nélkül.</p></div></div>
     {token ? <>
       <div className="url mono" title={url}>{url || "…"}</div>
+      {exp && <div className={`pexp ${expDays !== null && expDays <= 30 ? "warn" : ""}`}>{expDays !== null && expDays < 0 ? "A link lejárt – az ügyfél már nem látja az adatokat." : `Érvényes: ${fmtDate(exp)}-ig${expDays !== null && expDays <= 30 ? ` (${expDays} nap)` : ""}`}{canEdit && <button type="button" className="btn quiet sm" onClick={renew}>Meghosszabbítás 1 évvel</button>}</div>}
       <div className="acts">
         <button className="btn secondary sm" onClick={copy}>{Icon.copy(14)} Link másolása</button>
         {<a className="btn secondary sm" href={url} target="_blank" rel="noopener">{Icon.external(14)} Megnyitás</a>}

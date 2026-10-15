@@ -27,12 +27,22 @@ export function huHolidays(y: number): Map<string, string> {
   add(`${y}-11-01`, "Mindenszentek"); add(`${y}-12-24`, "Szenteste"); add(`${y}-12-25`, "Karácsony"); add(`${y}-12-26`, "Karácsony másnapja");
   holCache.set(y, m); return m;
 }
+/** Áthelyezett munkanapok (NGM-rendeletek). "work" = munkanappá váló szombat, "rest" = pihenőnappá váló hétköznap.
+ *  2026: 10/2025. (IV. 30.) NGM rendelet. A 2027-es rendelet megjelenésekor ide kell felvenni a napokat. */
+export const MOVED_DAYS: Record<string, "work" | "rest"> = {
+  "2026-01-02": "rest", "2026-01-10": "work",
+  "2026-08-21": "rest", "2026-08-08": "work",
+  "2026-12-24": "rest", "2026-12-12": "work",
+};
 export const shortDay = (iso: string) => { const d = parseISODate(iso); return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}.`; };
 export function holidayName(iso: string): string | null { if (!iso) return null; return huHolidays(Number(iso.slice(0, 4))).get(iso.slice(0, 10)) || null; }
 /** "szombat" / "vasárnap" / "Nemzeti ünnep (okt. 23.)" – or null on a working day. */
 export function isWeekendOrHoliday(iso: string): string | null {
   if (!iso || iso.length < 10) return null;
   const h = holidayName(iso); if (h) return `${h} (${shortDay(iso)})`;
+  const mv = MOVED_DAYS[iso.slice(0, 10)];
+  if (mv === "work") return null;
+  if (mv === "rest") return `áthelyezett pihenőnap (${shortDay(iso)})`;
   const dow = parseISODate(iso).getDay();
   return dow === 6 ? "szombat" : dow === 0 ? "vasárnap" : null;
 }
@@ -44,7 +54,8 @@ export function workdayShift(iso: string): { onto: string; prev: string; prevOn:
   const lbl = isWeekendOrHoliday(iso); if (!lbl) return null;
   const h = holidayName(iso); const prev = prevWorkingDay(iso); const pd = parseISODate(prev).getDay();
   const far = Math.round((parseISODate(iso).getTime() - parseISODate(prev).getTime()) / 86400000) > 3;
-  return { onto: h ? `ünnepnapra (${h}, ${shortDay(iso)})` : ONTO[parseISODate(iso).getDay()], prev, prevOn: far ? `${ON[pd]} (${shortDay(prev)})` : ON[pd] };
+  const mvRest = MOVED_DAYS[iso.slice(0, 10)] === "rest";
+  return { onto: h ? `ünnepnapra (${h}, ${shortDay(iso)})` : mvRest ? `áthelyezett pihenőnapra (${shortDay(iso)})` : ONTO[parseISODate(iso).getDay()], prev, prevOn: far ? `${ON[pd]} (${shortDay(prev)})` : ON[pd] };
 }
 /** "2026. 12. 01., kedd" */
 export function fmtDateDay(iso: string | null | undefined): string { if (!iso) return ""; const d = parseISODate(iso); return `${fmtDate(iso)}, ${DAYS[d.getDay()].toLocaleLowerCase("hu-HU")}`; }
@@ -114,7 +125,7 @@ function Calendar({ value, min, max, onPick, quick, onClear, clearLabel }: { val
     else if (e.key === "PageUp" || e.key === "PageDown") { e.preventDefault(); moveFocus(addMonths(focus, e.key === "PageUp" ? -1 : 1)); }
     else if (e.key === "Home" || e.key === "End") { e.preventDefault(); const d = parseISODate(focus); const dow = (d.getDay() + 6) % 7; moveFocus(addDays(focus, e.key === "Home" ? -dow : 6 - dow)); }
   };
-  const hols = useMemo(() => grid.filter(iso => iso.slice(0, 7) === cur && holidayName(iso)), [grid, cur]);
+  const hols = useMemo(() => grid.filter(iso => iso.slice(0, 7) === cur && (holidayName(iso) || MOVED_DAYS[iso])), [grid, cur]);
   const quicks = quick.map(q => ({ ...QUICK[q], v: QUICK[q].iso() })).filter(q => !off(q.v));
   return <div className="dt-cal">
     <div className="dt-cal-head">
@@ -125,14 +136,14 @@ function Calendar({ value, min, max, onPick, quick, onClear, clearLabel }: { val
     <div className="dt-week" aria-hidden>{WEEK.map((w, i) => <span key={w} className={i > 4 ? "we" : ""}>{w}</span>)}</div>
     <div className="dt-grid" role="grid" ref={ref} onKeyDown={onKey}>
       {grid.map(iso => {
-        const d = parseISODate(iso); const dow = d.getDay(); const hol = holidayName(iso); const dis = off(iso);
-        const cls = ["dt-day", iso.slice(0, 7) !== cur && "out", (dow === 0 || dow === 6) && "we", hol && "hol", iso === today && "today", iso === value && "sel"].filter(Boolean).join(" ");
+        const d = parseISODate(iso); const dow = d.getDay(); const mv = MOVED_DAYS[iso]; const hol = holidayName(iso) || (mv === "rest" ? "Áthelyezett pihenőnap" : mv === "work" ? "Áthelyezett munkanap" : null); const dis = off(iso);
+        const cls = ["dt-day", iso.slice(0, 7) !== cur && "out", (dow === 0 || dow === 6) && mv !== "work" && "we", mv === "work" && "mvwork", (holidayName(iso) || mv === "rest") && "hol", iso === today && "today", iso === value && "sel"].filter(Boolean).join(" ");
         return <button key={iso} type="button" role="gridcell" data-iso={iso} className={cls} disabled={dis} tabIndex={iso === focus ? 0 : -1} aria-selected={iso === value}
           aria-label={`${d.getFullYear()}. ${MONTHS[d.getMonth()]} ${d.getDate()}., ${DAYS[dow].toLocaleLowerCase("hu-HU")}${hol ? ` – ${hol}` : ""}${iso === today ? " (ma)" : ""}`} title={hol || undefined}
           onClick={() => onPick(iso)}>{d.getDate()}</button>;
       })}
     </div>
-    {hols.length > 0 && <div className="dt-hols">{hols.map(h => <span key={h}><i aria-hidden />{shortDay(h)} {holidayName(h)}</span>)}</div>}
+    {hols.length > 0 && <div className="dt-hols">{hols.map(h => <span key={h}><i aria-hidden />{shortDay(h)} {holidayName(h) || (MOVED_DAYS[h] === "work" ? "munkanap (áthelyezett)" : "pihenőnap (áthelyezett)")}</span>)}</div>}
     {(quicks.length > 0 || onClear) && <div className="dt-quick">
       {quicks.map(q => <button key={q.label} type="button" className="chip" aria-pressed={q.v === value} onClick={() => onPick(q.v)}>{q.label}</button>)}
       {onClear && <button type="button" className="chip" onClick={onClear}>{clearLabel || "Törlés"}</button>}

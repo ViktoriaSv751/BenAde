@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Company, Task, TaskType } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
-import { addDays, dateOf, fmtDate, relLabel, timeOf, toTS, todayISO } from "@/lib/date";
+import { addDays, dateOf, fmtDate, nowHM, relLabel, timeOf, toTS, todayISO } from "@/lib/date";
 import { companyName, fmtFt, plateFmt, titleCase } from "@/lib/format";
 import { computeDue, defaultReminders, type NewTask } from "@/lib/repo";
 import { useData, useMutate } from "@/lib/data";
@@ -108,7 +108,7 @@ function defaultRemind(due: string, time: string): { d: string; t: string } {
   const today = todayISO(); let d = addDays(due, -7); if (d < today) d = today; if (d > due && due >= today) d = due;
   if (new Date(toTS(d, time)).getTime() > Date.now() + 60_000) return { d, t: time };
   const tm = addDays(today, 1); if (tm <= due) return { d: tm, t: time };
-  const n = new Date(Date.now() + 10 * 60_000); let hh = n.getHours(), mm = Math.ceil(n.getMinutes() / 5) * 5; if (mm === 60) { hh++; mm = 0; }
+  const n = nowHM(10 * 60_000); let hh = n.h, mm = Math.ceil(n.m / 5) * 5; if (mm === 60) { hh++; mm = 0; }
   if (hh > 23) return { d: tm, t: time };
   return { d: today, t: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}` };
 }

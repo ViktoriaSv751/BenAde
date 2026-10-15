@@ -329,3 +329,4 @@ body[data-layout="phone"] .cm-pair { grid-template-columns: 1fr; }
 .cap-v2 .cap-tile[aria-pressed="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent); }
 .cap-v2 .cap-sum { border-radius: 20px; background: linear-gradient(165deg, var(--cs) 0%, var(--surface) 80%); border-color: color-mix(in srgb, var(--c) 24%, var(--line)); }
 .cap-v2 .cap-sum .cap-ico { color: #fff; background: linear-gradient(150deg, color-mix(in srgb, var(--c) 78%, #fff), var(--c)); }
+.dt-day.mvwork { color: var(--fg); box-shadow: inset 0 -2px 0 var(--time); }
