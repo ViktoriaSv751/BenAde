@@ -120,6 +120,28 @@ function WorkdayNote({ iso, what, onFix }: { iso: string; what: "due" | "rem"; o
   return <div className="cap-warn" role="status">{Icon.warn(18)}<span>{fixable ? `${head} – ${s.prevOn} szóljunk?` : `${head}.`}</span>{fixable && <button type="button" className="btn sm secondary" onClick={() => onFix!(s.prev)}>Igen, {s.prevOn}</button>}</div>;
 }
 
+function Sec({ n, title, aside, children, cls = "" }: { n: number; title: string; aside?: React.ReactNode; children: React.ReactNode; cls?: string }) {
+  return <section className={`cap-sec ${cls}`}><header className="cap-sec-h"><span className="cap-n">{n}</span><b>{title}</b>{aside && <span className="cap-sec-aside">{aside}</span>}</header><div className="cap-sec-b">{children}</div></section>;
+}
+/** Big, type-coloured "this is when it is due" card with a small from→to timeline. */
+function DueHero({ label, due, from, fromLabel, note, cls }: { label: string; due: string; from?: string; fromLabel?: string; note?: string; cls: string }) {
+  const rl = relLabel(toTS(due, "12:00")); const days = Math.round((new Date(due + "T12:00:00").getTime() - new Date(todayISO() + "T12:00:00").getTime()) / 86400000);
+  return <div className={`cap-hero ${cls}`} aria-live="polite">
+    <span className="cm-glow" aria-hidden />
+    <div className="cap-hero-top"><span className="cap-hero-k">{label}</span><span className={`cap-hero-rel ${rl.tone}`}>{rl.text}</span></div>
+    <div className="cap-hero-v mono">{fmtDateDay(due)}</div>
+    {from && <div className="cap-tl"><span className="cap-tl-a"><i />{fromLabel}<b className="mono">{fmtDate(from)}</b></span><span className="cap-tl-line"><em>{days > 0 ? `${days} nap` : ""}</em></span><span className="cap-tl-b"><i />Határidő<b className="mono">{fmtDate(due)}</b></span></div>}
+    {note && <div className="cap-hero-note">{note}</div>}
+  </div>;
+}
+function RemTimeline({ list }: { list: string[] }) {
+  if (!list.length) return <div className="cap-rems empty">Nincs jövőbeli emlékeztető.</div>;
+  return <div className="cap-rems">{list.map((r, i) => <span key={r} className="cap-rem" style={{ animationDelay: `${i * 40}ms` }}>{Icon.alarm(14)}<b className="mono">{fmtDate(r)}</b><span className="mono">{timeOf(r)}</span></span>)}</div>;
+}
+function EntityHead({ cls, icon, title, sub }: { cls: string; icon: React.ReactNode; title: string; sub: string }) {
+  return <div className={`cm-fhead ${cls}`}><span className="cm-glow" aria-hidden /><span className="cm-ico">{icon}</span><div className="cm-fht"><b>{title}</b><small>{sub}</small></div></div>;
+}
+
 function SuccessView({ title, lines, onAnother, anotherLabel, onDone, onOpen }: { title: string; lines: React.ReactNode; onAnother?: () => void; anotherLabel?: string; onDone: () => void; onOpen?: () => void }) {
   useEffect(() => { haptic(); }, []);
   return <div className="cap-success" role="status" aria-live="polite">
@@ -349,31 +371,34 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
   const fixReminders = () => { const list = reminders.map(r => { const dd = dateOf(r); return isWeekendOrHoliday(dd) ? { d: prevWorkingDay(dd), t: timeOf(r) } : { d: dd, t: timeOf(r) }; }).filter(r => future(toTS(r.d, r.t))); up({ customRem: list, useCustom: true }); };
   const baseLabel = type === "calibration" ? "Mikor volt a kalibráció?" : type === "card_expiry" ? "Mikor állították ki a kártyát?" : "Mikor töltötte le?";
 
+  const whenTitle = type === "training" ? "Időpont és helyszín" : type === "invoice" ? "Számla adatai" : "Mikor volt?";
   return (
-    <form onSubmit={submit} noValidate className="cap-form">
+    <form onSubmit={submit} noValidate className="cap-form cap-v2">
       {confirmEl}
       {banner}
       {quickable && <button type="button" className="btn quiet sm cap-switch" onClick={() => setFull(false)}>{Icon.back(16)} Vissza a lépésenkénti rögzítéshez</button>}
       <div className={`cm-fhead ${meta.cls}`}><span className="cm-glow" aria-hidden /><span className="cm-ico"><TypeIcon type={type} /></span><div className="cm-fht"><b>{meta.name}</b><small>{edit ? "Meglévő tétel szerkesztése" : meta.cycleKey ? `A következő határidőt automatikusan kiszámoljuk.` : type === "invoice" ? `A fizetési határidő automatikusan kiszámolva.` : "Értesítés előző nap és a napján reggel 06:00-kor."}</small></div><span className="cm-cycle">{meta.cycleKey ? `+${d[meta.cycleKey]} nap` : type === "invoice" ? `+${invDays(f.companyId)} nap` : "06:00"}</span></div>
       {data.companies.length === 0 && <div className="ferr">Még nincs rögzített cég. <button type="button" className="btn sm ghost" style={{ marginLeft: 8 }} onClick={() => set({ uj: "company" })}>Új cég</button></div>}
-      <Field label="Melyik cég?" required id="f-company"><CompanySelect value={f.companyId} onChange={v => up({ companyId: v, vehicleId: "", driverId: "" })} /></Field>
-      {subjectSel}
-      {dupNote}
-
-      {meta.cycleKey && <>
-        <Field label={baseLabel} id="f-base" hint="Alapértelmezetten a mai nap. Ebből számoljuk a következő határidőt.">
-          <DateField id="f-base" label={baseLabel} value={f.base} onChange={v => up({ base: v })} max={type === "vu_download" || type === "card_download" ? todayISO() : undefined} quick={["today", "yesterday"]} />
-        </Field>
-        <div className="autobox cap-due"><span>Következő határidő<br /><span style={{ fontWeight: 600, opacity: .8 }}>{f.dueTouched ? "egyedileg megadva" : `automatikusan +${d[meta.cycleKey]} naptári nap`}</span></span><span className="big">{fmtDateDay(f.dueDate)}</span></div>
-        <details open={f.dueTouched && !edit}><summary className="cap-summary">Határidő felülírása</summary>
-          <div className="row2" style={{ marginTop: 10 }}>
-            <DateField label="Következő határidő" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={f.base} quick={[]} />
-            <TimeField label="Határidő időpontja" value={f.dueTime} onChange={v => up({ dueTime: v })} />
-          </div>
-          {f.dueTouched && !edit && <button type="button" className="btn quiet sm" style={{ marginTop: 8 }} onClick={() => up({ dueTouched: false })}>Vissza az automatikusra</button>}
-        </details>
-      </>}
-      {type === "training" && <>
+      <Sec n={1} title={meta.subject === "vehicle" ? "Cég és jármű" : meta.subject === "driver" ? "Cég és gépkocsivezető" : "Cég"}>
+        <Field label="Melyik cég?" required id="f-company"><CompanySelect value={f.companyId} onChange={v => up({ companyId: v, vehicleId: "", driverId: "" })} /></Field>
+        {subjectSel}
+        {dupNote}
+      </Sec>
+      <Sec n={2} title={whenTitle}>
+        {meta.cycleKey && <>
+          <Field label={baseLabel} id="f-base" hint="Alapértelmezetten a mai nap.">
+            <DateField id="f-base" label={baseLabel} value={f.base} onChange={v => up({ base: v })} max={type === "vu_download" || type === "card_download" ? todayISO() : undefined} quick={["today", "yesterday"]} />
+          </Field>
+          <DueHero cls={meta.cls} label="Következő határidő" due={f.dueDate} from={f.base} fromLabel={type === "calibration" ? "Kalibráció" : type === "card_expiry" ? "Kiállítás" : "Letöltés"} note={f.dueTouched ? "Egyedileg megadva" : `Automatikusan +${d[meta.cycleKey]} naptári nap`} />
+          <details open={f.dueTouched && !edit} className="cap-more"><summary className="cap-summary">{Icon.pen(14)} Határidő felülírása</summary>
+            <div className="row2" style={{ marginTop: 10 }}>
+              <DateField label="Következő határidő" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={f.base} quick={[]} />
+              <TimeField label="Határidő időpontja" value={f.dueTime} onChange={v => up({ dueTime: v })} />
+            </div>
+            {f.dueTouched && !edit && <button type="button" className="btn quiet sm" style={{ marginTop: 8 }} onClick={() => up({ dueTouched: false })}>Vissza az automatikusra</button>}
+          </details>
+        </>}
+        {type === "training" && <>
         <Field label="Mikor lesz az oktatás?" required id="f-tdate">
           <div className="row2"><DateField id="f-tdate" label="Oktatás napja" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={edit ? undefined : todayISO()} quick={["today", "week", "month"]} /><TimeField label="Oktatás kezdete" value={f.dueTime} onChange={v => up({ dueTime: v })} /></div>
         </Field>
@@ -388,7 +413,7 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
         </div>
         <div className="info">{Icon.clock()}<span>Értesítés automatikusan: előző nap 16:00-kor és az oktatás napján 06:00-kor – a cég nevével, a címmel és a kapcsolattartó telefonszámával.</span></div>
       </>}
-      {type === "invoice" && <>
+        {type === "invoice" && <>
         <div className="row2">
           <Field label="Számlaszám" required id="f-no"><input className="ctl mono" id="f-no" value={f.invoiceNo} onChange={e => up({ invoiceNo: e.target.value })} placeholder="2026/001" /></Field>
           <Field label="Mikor állította ki?" id="f-issue"><DateField id="f-issue" label="Kiállítás dátuma" value={f.issue} onChange={v => up({ issue: v })} quick={["today", "yesterday"]} /></Field>
@@ -404,9 +429,11 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
         {!f.paid && (dueShifted
           ? <div className="cap-ok">{Icon.check(18)}<span>A határidő előtti munkanapon szólunk: {fmtDateDay(dueRemDate)} {f.remTime}.</span><button type="button" className="btn sm quiet" onClick={() => up({ dueRemShift: false })}>Visszaállítás</button></div>
           : <WorkdayNote iso={f.dueDate} what="due" onFix={() => up({ dueRemShift: true })} />)}
-      </>}
-
-      {type !== "training" && type !== "invoice" && <div className="field"><label>Mikor szóljunk?</label>
+      
+          {f.dueDate && !f.paid && <DueHero cls={meta.cls} label="Fizetési határidő" due={f.dueDate} from={f.issue} fromLabel="Kiállítás" />}
+        </>}
+      </Sec>
+      {type !== "training" && type !== "invoice" && <Sec n={3} title="Mikor szóljunk?" aside={<span className="cap-count">{reminders.length} értesítés</span>}>
         {!f.useCustom ? <>
           <div className="chips cap-wrap">{[14, 7, 3, 1, 0].map(n => <button key={n} type="button" className="chip" aria-pressed={f.remDays.includes(n)} onClick={() => up({ remDays: f.remDays.includes(n) ? f.remDays.filter(x => x !== n) : [...f.remDays, n].sort((a, b) => b - a) })}>{n === 0 ? "A határidő napján" : `${n} nappal előtte`}</button>)}</div>
           <div className="row2" style={{ marginTop: 8, alignItems: "end" }}><Field label="Hány órakor?"><TimeField label="Emlékeztető időpontja" value={f.remTime} onChange={v => up({ remTime: v })} /></Field><button type="button" className="btn quiet sm" onClick={() => up({ customRem: reminders.map(r => ({ d: dateOf(r), t: timeOf(r) })), useCustom: true })}>Egyedi időpontok…</button></div>
@@ -418,14 +445,16 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
           </div>)}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button type="button" className="btn ghost sm" onClick={() => up({ customRem: [...f.customRem, { d: f.dueDate, t: f.remTime }] })}>{Icon.plus(16)} Időpont</button><button type="button" className="btn quiet sm" onClick={() => up({ useCustom: false })}>Vissza az alapértékekhez</button></div>
         </>}
-        <div className="hint">{reminders.length ? reminders.map(r => `${fmtDate(r)} ${timeOf(r)}`).join(" · ") : "Nincs jövőbeli emlékeztető."}</div>
+        <RemTimeline list={reminders} />
         {offending.length > 0 ? <WorkdayNote iso={dateOf(offending[0])} what={dateOf(offending[0]) === f.dueDate ? "due" : "rem"} onFix={fixReminders} /> : <WorkdayNote iso={f.dueDate} what="due" />}
-      </div>}
-
-      {meta.cycleKey && !edit && <div className="srow" style={{ border: 0, padding: "4px 0" }}><div><div className="k">Sorozat</div><div className="d">Lezáráskor automatikusan létrejön a következő ciklus (+{d[meta.cycleKey]} nap).</div></div><Switch checked={f.recurring} onChange={v => up({ recurring: v })} label="Sorozat" /></div>}
-      <Field label="Megjegyzés" id="f-note" hint="Nem kötelező. A listában és az értesítésben is megjelenik."><textarea className="ctl" id="f-note" value={f.note} onChange={e => up({ note: e.target.value })} placeholder="Pl. telephelyen letölteni" /></Field>
+      
+        {meta.cycleKey && !edit && <div className="srow" style={{ border: 0, padding: "4px 0" }}><div><div className="k">Sorozat</div><div className="d">Lezáráskor automatikusan létrejön a következő ciklus (+{d[meta.cycleKey]} nap).</div></div><Switch checked={f.recurring} onChange={v => up({ recurring: v })} label="Sorozat" /></div>}
+      </Sec>}
+      <Sec n={type !== "training" && type !== "invoice" ? 4 : 3} title="Megjegyzés" cls="cap-sec-quiet">
+        <Field label="Megjegyzés" id="f-note" hint="Nem kötelező. A listában és az értesítésben is megjelenik."><textarea className="ctl" id="f-note" value={f.note} onChange={e => up({ note: e.target.value })} placeholder="Pl. telephelyen letölteni" /></Field>
+      </Sec>
       {err && <div className="ferr" role="alert">{err}</div>}
-      <div className="cap-foot"><button type="button" className="btn ghost" onClick={onDone}>Mégse</button><button type="submit" className="btn primary grow" disabled={busy}>{Icon.check(18)} {edit ? "Mentés" : "Rögzítés"}</button></div>
+      <div className={`cap-foot ${meta.cls}`}><button type="button" className="btn ghost" onClick={onDone}>Mégse</button><button type="submit" className="btn primary grow cap-go" disabled={busy}>{Icon.check(18)} {edit ? "Mentés" : "Rögzítés"}</button></div>
     </form>
   );
 }
@@ -496,7 +525,7 @@ function QuickSteps({ type, f, up, step, setStep, onFull, banner, dupNote, err, 
     <div className="cap-progress" role="progressbar" aria-valuemin={1} aria-valuemax={3} aria-valuenow={step} aria-label={`${step}. lépés a 3-ból`}>{[1, 2, 3].map(i => <i key={i} className={i <= step ? "on" : ""} />)}</div>
   </div>;
 
-  if (step === 1) return <div className="cap-form">
+  if (step === 1) return <div className="cap-form cap-v2">
     {banner}{head}
     <h3 className="cap-q">Melyik cégnél töltötte le?</h3>
     <div className="cap-search">{Icon.search(18)}<input className="ctl" type="search" enterKeyHint="go" autoFocus aria-label="Cég keresése" placeholder="Cég neve vagy adószáma…" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (hits?.length === 1) pickCompany(hits[0].id); else if (q.trim() && !exact) newCompany(); else if (exact) pickCompany(exact.id); } }} /></div>
@@ -508,7 +537,7 @@ function QuickSteps({ type, f, up, step, setStep, onFull, banner, dupNote, err, 
     {hits && hits.length === 0 && <div className="hint" style={{ textAlign: "center" }}>Nincs ilyen cég – rögzítse újként a fenti gombbal.</div>}
   </div>;
 
-  if (step === 2) return <div className="cap-form">
+  if (step === 2) return <div className="cap-form cap-v2">
     {banner}{head}
     <div className="cap-chosen"><span>{Icon.users(18)}</span><b>{company?.name || "–"}</b><button type="button" className="btn quiet sm" onClick={() => setStep(1)}>Másik cég</button></div>
     <h3 className="cap-q">{isV ? "Melyik jármű egységét töltötte le?" : "Kinek a kártyáját töltötte le?"}</h3>
@@ -527,7 +556,7 @@ function QuickSteps({ type, f, up, step, setStep, onFull, banner, dupNote, err, 
 
   // step 3 – summary
   const today = todayISO();
-  return <div className="cap-form">
+  return <div className="cap-form cap-v2">
     {banner}{head}
     <div className={`cap-sum ${meta.cls}`}>
       <span className="cap-ico"><TypeIcon type={type} /></span>
@@ -536,15 +565,11 @@ function QuickSteps({ type, f, up, step, setStep, onFull, banner, dupNote, err, 
     </div>
     {dupNote}
     <Field label="Mikor töltötte le?" id="q-base"><DateField id="q-base" label="Mikor töltötte le?" value={f.base} onChange={v => up({ base: v })} max={today} quick={["today", "yesterday"]} /></Field>
-    <div className="cap-next">
-      <span className="k">Következő határidő</span>
-      <span className="v mono">{fmtDateDay(f.dueDate)}</span>
-      <span className="s">{f.dueTouched ? "Egyedileg megadva." : `Automatikusan +${d[meta.cycleKey!]} nap a letöltéstől.`} {relLabel(toTS(f.dueDate, "12:00")).text}.</span>
-      {!editDue ? <button type="button" className="btn quiet sm" onClick={() => setEditDue(true)}>Módosítás</button> : <div className="cap-next-edit">
-        <DateField label="Következő határidő" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={f.base} quick={[]} />
-        {f.dueTouched && <button type="button" className="btn quiet sm" onClick={() => { up({ dueTouched: false }); setEditDue(false); }}>Vissza az automatikusra</button>}
-      </div>}
-    </div>
+    <DueHero cls={meta.cls} label="Következő határidő" due={f.dueDate} from={f.base} fromLabel="Letöltés" note={f.dueTouched ? "Egyedileg megadva" : `Automatikusan +${d[meta.cycleKey!]} nap a letöltéstől`} />
+    {!editDue ? <button type="button" className="btn quiet sm cap-switch" onClick={() => setEditDue(true)}>{Icon.pen(14)} Határidő módosítása</button> : <div className="cap-next-edit">
+      <DateField label="Következő határidő" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={f.base} quick={[]} />
+      {f.dueTouched && <button type="button" className="btn quiet sm" onClick={() => { up({ dueTouched: false }); setEditDue(false); }}>Vissza az automatikusra</button>}
+    </div>}
     {f.dueRemShift && isWeekendOrHoliday(f.dueDate)
       ? <div className="cap-ok">{Icon.check(18)}<span>A határidő napja helyett {fmtDateDay(dueRemDate)} {f.remTime}-kor szólunk.</span><button type="button" className="btn sm quiet" onClick={() => up({ dueRemShift: false })}>Visszaállítás</button></div>
       : <WorkdayNote iso={f.dueDate} what="due" onFix={() => up({ dueRemShift: true })} />}
@@ -555,9 +580,10 @@ function QuickSteps({ type, f, up, step, setStep, onFull, banner, dupNote, err, 
       </div>
     </Field>
     <WorkdayNote iso={f.qRemDate} what="rem" onFix={prev => up({ qRemDate: prev, qRemTouched: true })} />
+    <RemTimeline list={reminders} />
     <Field label="Megjegyzés" id="q-note" hint="Nem kötelező."><textarea className="ctl" id="q-note" rows={2} value={f.note} onChange={e => up({ note: e.target.value })} placeholder="Pl. telephelyen letölteni" /></Field>
     {err && <div className="ferr" role="alert">{err}</div>}
-    <div className="cap-foot"><button type="button" className="btn primary lg grow" disabled={busy} onClick={onSubmit}>{Icon.check(18)} Rögzítés</button></div>
+    <div className={`cap-foot ${meta.cls}`}><button type="button" className="btn primary lg grow cap-go" disabled={busy} onClick={onSubmit}>{Icon.check(18)} Rögzítés</button></div>
   </div>;
 }
 function CompanyRow({ c, onPick, recent }: { c: Company; onPick: (id: string) => void; recent?: boolean }) {
@@ -603,16 +629,21 @@ export function CompanyForm({ onDone, editId }: { onDone: (id?: string) => void;
       onDone(c.id);
     } catch { /* toast shown */ } finally { setBusy(false); }
   }
-  return <form onSubmit={submit} noValidate className="cap-form">
+  return <form onSubmit={submit} noValidate className="cap-form cap-v2">
+    <EntityHead cls="t-ent" icon={Icon.users(22)} title={edit ? "Cég szerkesztése" : "Új cég az adatbankba"} sub="Csak a név kötelező – a többi adat később is pótolható." />
+    <Sec n={1} title="Alapadatok">
     <Field label="Cég neve" required id="c-name"><input className="ctl" id="c-name" value={f.name} onChange={u("name")} placeholder="Pl. Példa Kft." autoFocus autoComplete="organization" /></Field>
     {similar.length > 0 && <div className="cap-warn" role="status">{Icon.warn(18)}<span>Hasonló cég már szerepel: {similar.map((s, i) => <span key={s.c.id}>{i > 0 && ", "}<b>{s.c.name}</b>{s.c.tax_id ? <span className="mono"> ({s.c.tax_id})</span> : null} – {s.why}</span>)}. Ha mégis új cég, nyugodtan rögzítse.</span></div>}
     <div className="row2"><Field label="Adószám" id="c-tax" hint="Formátum: 12345678-2-42"><input className="ctl mono" id="c-tax" inputMode="numeric" value={f.tax_id} onChange={u("tax_id", taxLive)} placeholder="12345678-2-42" /></Field><Field label="Telefon" id="c-phone"><input className="ctl mono" id="c-phone" type="tel" inputMode="tel" value={f.phone} onChange={u("phone", phoneLive)} placeholder="+36 1 234 5678" /></Field></div>
+    </Sec>
+    <Sec n={2} title="Elérhetőség és számlázás">
     <Field label="Cím" id="c-addr"><input className="ctl" id="c-addr" value={f.address} onChange={u("address")} placeholder="Irányítószám, település, utca" autoComplete="street-address" /></Field>
     <div className="row2"><Field label="E-mail" id="c-email"><input className="ctl" id="c-email" type="email" inputMode="email" value={f.email} onChange={u("email")} placeholder="info@pelda.hu" /></Field><Field label="Fizetési határidő (nap)" id="c-inv" hint="Üresen az alapértelmezett."><input className="ctl mono" id="c-inv" inputMode="numeric" value={f.invoice_days} onChange={u("invoice_days", s => s.replace(/\D/g, "").slice(0, 3))} placeholder={String(data.workspace.defaults.invoiceDays)} /></Field></div>
     {!edit && <div className="row2"><Field label="Kapcsolattartó" id="c-cn"><input className="ctl" id="c-cn" value={f.contactName} onChange={u("contactName", liveTitle)} placeholder="Pl. Kovács Anna" /></Field><Field label="Kapcsolattartó telefonja" id="c-cp"><input className="ctl mono" id="c-cp" type="tel" inputMode="tel" value={f.contactPhone} onChange={u("contactPhone", phoneLive)} placeholder="+36 30 123 4567" /></Field></div>}
-    <Field label="Jegyzet" id="c-notes"><textarea className="ctl" id="c-notes" value={f.notes} onChange={u("notes")} /></Field>
+    </Sec>
+    <Sec n={3} title="Jegyzet" cls="cap-sec-quiet"><Field label="Jegyzet" id="c-notes"><textarea className="ctl" id="c-notes" value={f.notes} onChange={u("notes")} placeholder="Pl. csak délelőtt hívható" /></Field></Sec>
     {err && <div className="ferr" role="alert">{err}</div>}
-    <div className="cap-foot"><button type="button" className="btn ghost" onClick={() => onDone()}>Mégse</button><button type="submit" className="btn primary grow" disabled={busy}>{Icon.check(18)} {edit ? "Mentés" : "Cég rögzítése"}</button></div>
+    <div className="cap-foot t-ent"><button type="button" className="btn ghost" onClick={() => onDone()}>Mégse</button><button type="submit" className="btn primary grow cap-go" disabled={busy}>{Icon.check(18)} {edit ? "Mentés" : "Cég rögzítése"}</button></div>
   </form>;
 }
 export function VehicleForm({ onDone, editId, companyId: cidProp }: { onDone: () => void; editId?: string; companyId?: string }) {
@@ -620,12 +651,18 @@ export function VehicleForm({ onDone, editId, companyId: cidProp }: { onDone: ()
   const [cid, setCid] = useState(edit?.company_id || cidProp || get("cid") || ""); const [plate, setPlate] = useState(edit?.plate || ""); const [make, setMake] = useState(edit?.make || ""); const [vu, setVu] = useState(edit?.vu_type || ""); const [err, setErr] = useState<string | null>(null);
   async function submit(e: React.FormEvent) { e.preventDefault(); const p = plateFmt(plate); if (!cid) return setErr("Válasszon céget."); if (!p) return setErr("Adja meg a rendszámot."); const key = p.replace(/[^A-Z0-9]/g, ""); const dup = data.vehicles.find(v => v.plate.replace(/[^A-Z0-9]/g, "") === key && v.id !== edit?.id); if (dup) return setErr(`Ez a rendszám már szerepel (${data.companies.find(c => c.id === dup.company_id)?.name}).`);
     const payload = { company_id: cid, plate: p, make: make.trim() || null, vu_type: vu || null }; try { if (edit) await mutate(r => r.vehicle.update(edit.id, payload), { success: "Mentve" }); else await mutate(r => r.vehicle.create(payload), { success: "Jármű rögzítve" }); onDone(); } catch { /* toast shown */ } }
-  return <form onSubmit={submit} noValidate className="cap-form">
+  return <form onSubmit={submit} noValidate className="cap-form cap-v2">
+    <EntityHead cls="t-vu" icon={Icon.truck(22)} title={edit ? "Jármű szerkesztése" : "Új jármű"} sub="A rendszámot automatikusan nagybetűsítjük és ellenőrizzük." />
+    <Sec n={1} title="Melyik cégé?">
     <Field label="Melyik cég járműve?" required id="v-c"><CompanySelect id="v-c" value={cid} onChange={setCid} /></Field>
+    </Sec>
+    <Sec n={2} title="Jármű adatai">
+    {plate.trim() && <div className="cap-plate" aria-hidden><span className="eu">H</span><b className="mono">{plateFmt(plate) || plate}</b></div>}
     <Field label="Rendszám" required id="v-p" hint="Mindig nagybetűvel, kötőjellel: ABC-123 vagy AA BB-123."><input className="ctl mono cap-plate-in" id="v-p" value={plate} onChange={e => setPlate(livePlate(e.target.value))} onBlur={() => setPlate(plateFmt(plate))} placeholder="ABC-123" autoFocus autoCapitalize="characters" autoComplete="off" /></Field>
     <div className="row2"><Field label="Gyártmány / típus" id="v-m"><input className="ctl" id="v-m" value={make} onChange={e => setMake(e.target.value)} placeholder="Pl. Volvo FH" /></Field><Field label="Tachográf" id="v-vu"><select className="ctl" id="v-vu" value={vu} onChange={e => setVu(e.target.value)}><option value="">–</option><option>Smart tachográf G2 v2</option><option>Smart tachográf G2</option><option>Smart tachográf G1</option><option>Digitális tachográf</option><option>Analóg</option></select></Field></div>
+    </Sec>
     {err && <div className="ferr" role="alert">{err}</div>}
-    <div className="cap-foot"><button type="button" className="btn ghost" onClick={onDone}>Mégse</button><button type="submit" className="btn primary grow">{Icon.check(18)} {edit ? "Mentés" : "Jármű rögzítése"}</button></div>
+    <div className="cap-foot t-vu"><button type="button" className="btn ghost" onClick={onDone}>Mégse</button><button type="submit" className="btn primary grow cap-go">{Icon.check(18)} {edit ? "Mentés" : "Jármű rögzítése"}</button></div>
   </form>;
 }
 export function DriverForm({ onDone, editId, companyId: cidProp }: { onDone: () => void; editId?: string; companyId?: string }) {
@@ -633,11 +670,16 @@ export function DriverForm({ onDone, editId, companyId: cidProp }: { onDone: () 
   const [cid, setCid] = useState(edit?.company_id || cidProp || get("cid") || ""); const [name, setName] = useState(edit?.name || ""); const [card, setCard] = useState(edit?.card_number || ""); const [phone, setPhone] = useState(edit?.phone || ""); const [err, setErr] = useState<string | null>(null);
   async function submit(e: React.FormEvent) { e.preventDefault(); const n = titleCase(name); if (!cid) return setErr("Válasszon céget."); if (!n) return setErr("Adja meg a nevet."); if (data.drivers.some(x => x.company_id === cid && x.name === n && x.id !== edit?.id)) return setErr("Ez a gépkocsivezető már szerepel ennél a cégnél.");
     const payload = { company_id: cid, name: n, card_number: card.trim().toUpperCase() || null, phone: phone.trim() || null }; try { if (edit) await mutate(r => r.driver.update(edit.id, payload), { success: "Mentve" }); else await mutate(r => r.driver.create(payload), { success: "Gépkocsivezető rögzítve" }); onDone(); } catch { /* toast shown */ } }
-  return <form onSubmit={submit} noValidate className="cap-form">
+  return <form onSubmit={submit} noValidate className="cap-form cap-v2">
+    <EntityHead cls="t-card" icon={Icon.user(22)} title={edit ? "Gépkocsivezető szerkesztése" : "Új gépkocsivezető"} sub="A nevet automatikusan nagy kezdőbetűkkel írjuk." />
+    <Sec n={1} title="Melyik cégnél vezet?">
     <Field label="Melyik cég gépkocsivezetője?" required id="d-c"><CompanySelect id="d-c" value={cid} onChange={setCid} /></Field>
+    </Sec>
+    <Sec n={2} title="Gépkocsivezető adatai">
     <Field label="Név" required id="d-n" hint="Minden szó nagybetűvel kezdődik – az app javítja."><input className="ctl" id="d-n" value={name} onChange={e => setName(liveTitle(e.target.value))} onBlur={() => setName(titleCase(name))} placeholder="Pl. Kovács János" autoFocus autoCapitalize="words" /></Field>
     <div className="row2"><Field label="Vezetői kártya száma" id="d-k"><input className="ctl mono" id="d-k" value={card} onChange={e => setCard(e.target.value.toUpperCase())} placeholder="HU…" autoCapitalize="characters" /></Field><Field label="Telefon" id="d-p"><input className="ctl mono" id="d-p" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(phoneLive(e.target.value))} placeholder="+36 30 123 4567" /></Field></div>
+    </Sec>
     {err && <div className="ferr" role="alert">{err}</div>}
-    <div className="cap-foot"><button type="button" className="btn ghost" onClick={onDone}>Mégse</button><button type="submit" className="btn primary grow">{Icon.check(18)} {edit ? "Mentés" : "Rögzítés"}</button></div>
+    <div className="cap-foot t-card"><button type="button" className="btn ghost" onClick={onDone}>Mégse</button><button type="submit" className="btn primary grow cap-go">{Icon.check(18)} {edit ? "Mentés" : "Rögzítés"}</button></div>
   </form>;
 }
