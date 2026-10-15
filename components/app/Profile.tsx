@@ -46,7 +46,7 @@ export function ProfileView() {
         {stat(over, "Lejárt", base, over ? "danger" : "")}
       </div>}
       <div className="pgroup"><div className="ph">Munkaterület</div>
-        {row(`${base}/ertesitesek`, Icon.alarm(20), "Értesítések", unread ? `${unread} olvasatlan · push, e-mail` : "Push, e-mail, összefoglalók", unread)}
+        {row(`${base}/ertesitesek`, Icon.alarm(20), "Értesítések", unread ? `${unread} olvasatlan · push` : "Push, összefoglalók", unread)}
         {row(`${base}/naptar`, Icon.calendar(20), "Naptár", "Havi, heti és napi nézet")}
         {row(`${base}/csapat`, Icon.team(20), "Csapat", data ? `${data.members.length} tag · meghívás, szerepek` : "Munkatársak, szerepek")}
         {row(`${base}/import`, Icon.upload(20), "Excel import", "Cégek, rendszámok, sofőrök egy táblázatból")}

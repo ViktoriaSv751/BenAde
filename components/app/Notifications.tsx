@@ -30,7 +30,6 @@ export function NotificationsView() {
     <><PushSetup />
     <div className="card" style={{ padding: "4px 16px" }}>
       <div className="srow"><div><div className="k">Push értesítések</div><div className="d">Határidők és oktatás-emlékeztetők</div></div><Switch checked={prefs.push} onChange={v => setPref("push", v)} label="Push" /></div>
-      <div className="srow"><div><div className="k">E-mail</div><div className="d">Ugyanazok e-mailben is – a levélküldő beállítása után indul</div></div><Switch checked={prefs.email} onChange={v => setPref("email", v)} label="E-mail" /></div>
       <div className="srow"><div><div className="k">Reggeli összefoglaló</div><div className="d">Minden nap 07:00 – a nap teendői</div></div><Switch checked={prefs.dailyDigest} onChange={v => setPref("dailyDigest", v)} label="Napi" /></div>
       <div className="srow"><div><div className="k">Heti előretekintés</div><div className="d">Hétfő 07:00 – a hét letöltései és számlái</div></div><Switch checked={prefs.weeklyDigest} onChange={v => setPref("weeklyDigest", v)} label="Heti" /></div>
       <div className="srow"><div><div className="k">Csendes időszak</div><div className="d">{data.workspace.defaults.quietFrom}–{data.workspace.defaults.quietTo} között nem jön push (beállításokban módosítható)</div></div></div>

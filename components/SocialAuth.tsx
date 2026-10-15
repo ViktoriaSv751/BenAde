@@ -16,20 +16,20 @@ export default function SocialAuth({ next = "/app", verb = "Folytatás", emailHr
   const [prov, setProv] = useState<{ apple: boolean; google: boolean } | null>(null);
   useEffect(() => { const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; if (!url || !key) { setProv({ apple: false, google: false }); return; }
     fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } }).then(r => r.json()).then(j => setProv({ apple: !!j?.external?.apple, google: !!j?.external?.google })).catch(() => setProv({ apple: false, google: false })); }, []);
-  const anySocial = !!prov && (prov.apple || prov.google);
   async function go(provider: "google" | "apple") {
-    setBusy(provider); setErr(null);
+    setErr(null);
+    if (prov && !prov[provider]) { setErr(`A ${provider === "apple" ? "Apple" : "Google"}-belépés néhány napon belül indul. Addig regisztráljon vagy lépjen be e-mail-címmel, vagy próbálja ki a tesztfiókkal.`); return; }
+    setBusy(provider);
     const sb = createClient();
     const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
     if (error) { setBusy(null); setErr(/not enabled|Unsupported provider|provider is not/i.test(error.message) ? `A ${provider === "apple" ? "Apple" : "Google"}-bejelentkezés bekapcsolása folyamatban van. Addig próbálja ki a tesztfiókkal.` : error.message); }
   }
   return (
     <div className="social">
-      {prov === null && <div className="btn mail" aria-hidden style={{ opacity: .4 }} />}
-      {prov?.apple && <button type="button" className="btn apple" onClick={() => go("apple")} disabled={!!busy}>{A}<span>{busy === "apple" ? "Átirányítás…" : `${verb} Apple-lel`}</span></button>}
-      {prov?.google && <button type="button" className="btn google" onClick={() => go("google")} disabled={!!busy}>{G}<span>{busy === "google" ? "Átirányítás…" : `${verb} Google-lel`}</span></button>}
+      {<button type="button" className="btn apple" onClick={() => go("apple")} disabled={!!busy}>{A}<span>{busy === "apple" ? "Átirányítás…" : `${verb} Apple-lel`}</span></button>}
+      {<button type="button" className="btn google" onClick={() => go("google")} disabled={!!busy}>{G}<span>{busy === "google" ? "Átirányítás…" : `${verb} Google-lel`}</span></button>}
       {err && <div className="ferr" role="alert">{err}</div>}
-      {emailHref && prov !== null && <Link className={`btn ${anySocial ? "mail" : "apple"}`} href={emailHref}>{M}<span>{verb} e-mail-címmel</span></Link>}
+      {emailHref && <Link className="btn mail" href={emailHref}>{M}<span>{verb} e-mail-címmel</span></Link>}
       <div className="or">vagy</div>
       <Link className="btn test" href="/demo">{Play}<span>Belépés tesztfiókkal</span></Link>
       <p className="test-note">Azonnal kipróbálható, regisztráció és jelszó nélkül – három hónapnyi mintaadattal.</p>
