@@ -21,7 +21,7 @@ Az app kódja kész, a web (https://benade.vercel.app) élesben fut. A natív bu
 
 - [ ] `git clone` → `npm install` → `npx cap sync ios` → `npx cap open ios`
 - [ ] Xcode → App target → Signing & Capabilities: saját Team, Bundle ID `hu.benade.app`
-- [ ] Capabilities: **Push Notifications nem kell** (helyi értesítéseket használunk)
+- [ ] Capabilities: **Push Notifications** bekapcsolása (szerveroldali push), Background Modes → Remote notifications
 - [ ] Product → Archive → Distribute → App Store Connect
 - [ ] App Store Connect → új app: név, elsődleges nyelv **magyar**, SKU `benade-1`
 - [ ] App Privacy: lásd 3. pont

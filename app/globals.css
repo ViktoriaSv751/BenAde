@@ -401,7 +401,8 @@ select.ctl { padding-right: 38px; background-image: linear-gradient(45deg, trans
 .bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; margin-top: 36px; }
 .tile { min-width: 0; border-radius: 24px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); padding: 24px; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden; min-height: 220px; color: #F2F4F8; }
 .tile.img { padding: 0; min-height: 320px; } .tile.img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
-.tile.img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(5,8,15,.92) 100%); }
+.tile.img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 25%, rgba(5,8,15,.75) 55%, rgba(5,8,15,.97) 100%); }
+.tile.img.col-6 { min-height: 420px; }
 .tile.img .cap { position: absolute; left: 22px; right: 22px; bottom: 22px; z-index: 1; }
 .tile .ico { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; background: var(--cs); color: var(--c); }
 .tile h3 { font-size: 19px; color: #fff; } .tile p { color: #9AA5BC; font-size: 14px; line-height: 1.55; }

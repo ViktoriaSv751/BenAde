@@ -13,17 +13,17 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: "always",
-    backgroundColor: "#0B1530",
+    backgroundColor: "#0A0D14",
     preferredContentMode: "mobile",
   },
   android: {
-    backgroundColor: "#0B1530",
+    backgroundColor: "#0A0D14",
     allowMixedContent: false,
   },
   plugins: {
-    SplashScreen: { launchShowDuration: 1200, launchAutoHide: true, backgroundColor: "#0B1530", androidScaleType: "CENTER_CROP", showSpinner: false },
-    StatusBar: { style: "DARK", backgroundColor: "#0B1530", overlaysWebView: false },
-    LocalNotifications: { smallIcon: "ic_stat_benade", iconColor: "#1E5EFF" },
+    SplashScreen: { launchShowDuration: 1200, launchAutoHide: true, backgroundColor: "#0A0D14", androidScaleType: "CENTER_CROP", showSpinner: false },
+    StatusBar: { style: "DARK", backgroundColor: "#0A0D14", overlaysWebView: false },
+    LocalNotifications: { smallIcon: "ic_stat_benade", iconColor: "#1F5BFF" },
   },
 };
 
