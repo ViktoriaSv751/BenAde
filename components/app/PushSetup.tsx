@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { pushSupport, sendTestPush, subscribeWebPush } from "@/lib/push";
+import { pushSupport, sendTestPush, subscribeWebPush, syncWebPush } from "@/lib/push";
 import { useData, useToast } from "@/lib/data";
 import { Icon } from "@/components/ui";
 import { useShell } from "./Shell";
@@ -29,7 +29,7 @@ export function PushSetup({ variant = "card" }: { variant?: "card" | "banner" })
   const enable = async () => { if (demo) { toast("A tesztfiókban nincs valódi értesítés – saját fiókkal kapcsolható be."); return; } setBusy(true); const r = await subscribeWebPush().catch(() => "off" as State); setSt(r); setBusy(false);
     if (r === "on" && data) { const err = await sendTestPush(data.workspace.id); toast(err ? "Bekapcsolva, de a teszt nem ment ki: " + err : "Bekapcsolva! Egy percen belül érkezik egy teszt értesítés.", err ? "err" : "ok"); }
     else if (r === "denied") toast("A telefon letiltotta az értesítéseket – engedélyezze a beállításokban.", "err"); };
-  const test = async () => { if (!data || demo) return; const err = await sendTestPush(data.workspace.id); toast(err ? "Nem sikerült: " + err : "Teszt elküldve – egy percen belül megérkezik.", err ? "err" : "ok"); };
+  const test = async () => { if (!data || demo) return; await syncWebPush(); const err = await sendTestPush(data.workspace.id); toast(err ? "Nem sikerült: " + err : "Teszt elküldve – egy percen belül megérkezik.", err ? "err" : "ok"); };
 
   if (variant === "banner") {
     if (st === "unknown" || st === "on" || hidden || demo) return null;

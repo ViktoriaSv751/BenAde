@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
           try {
             if (d.platform === "web" && vapidOk) { await webpush.sendNotification(JSON.parse(d.token), JSON.stringify({ title: n.title, body: n.body, url, tag: n.task_id || n.id })); ok++; }
             else if (d.platform !== "web" && fcm) { const r = await fetch("https://fcm.googleapis.com/fcm/send", { method: "POST", headers: { authorization: `key=${fcm}`, "content-type": "application/json" }, body: JSON.stringify({ to: d.token, notification: { title: n.title, body: n.body }, data: { url } }) }); if (r.ok) ok++; else err = `fcm ${r.status}`; }
-          } catch (e) { const msg = String((e as { statusCode?: number }).statusCode || e); if (/410|404/.test(msg)) await sb.from("devices").delete().eq("id", d.id); err = msg; }
+          } catch (e) { const x = e as { statusCode?: number; body?: string; message?: string }; const msg = `${x.statusCode || ""} ${String(x.body || x.message || e).slice(0, 300)}`.trim(); if (/^(410|404)|VapidPkHashMismatch|BadDeviceToken/.test(msg)) await sb.from("devices").delete().eq("id", d.id); err = msg; }
         }
       } else if (n.channel === "email" && resend) {
         if (prefs.email === false) continue; const to = emails.get(uid); if (!to) continue;

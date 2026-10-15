@@ -11,7 +11,7 @@ export function AppRoot({ children, userId, email, name, wsId }: { children: Rea
   const sb = useMemo(() => createClient(), []);
   const repo = useMemo<Repo>(() => new SupabaseRepo(sb, wsId, userId), [sb, wsId, userId]);
   const signOut = useCallback(async () => { clearCachedSnapshot(); await sb.auth.signOut(); router.replace("/login"); router.refresh(); }, [sb, router]);
-  useEffect(() => { if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {}); }, []);
+  useEffect(() => { if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {}); import("@/lib/push").then(m => m.syncWebPush()).catch(() => {}); }, [userId]);
   useEffect(() => { // native: status bar + register push when already permitted
     const w = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };
     if (!w.Capacitor?.isNativePlatform?.()) return;
