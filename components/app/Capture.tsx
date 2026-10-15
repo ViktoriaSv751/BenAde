@@ -351,7 +351,7 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
       </>}
       {type === "training" && <>
         <Field label="Mikor lesz az oktatás?" required id="f-tdate">
-          <div className="row2"><DateField id="f-tdate" label="Oktatás napja" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={edit ? undefined : todayISO()} quick={["today", "week", "month"]} /><TimeField label="Oktatás kezdete" value={f.dueTime} onChange={v => up({ dueTime: v })} quick={["08:00", "09:00", "10:00", "14:00"]} /></div>
+          <div className="row2"><DateField id="f-tdate" label="Oktatás napja" value={f.dueDate} onChange={v => up({ dueDate: v, dueTouched: true })} min={edit ? undefined : todayISO()} quick={["today", "week", "month"]} /><TimeField label="Oktatás kezdete" value={f.dueTime} onChange={v => up({ dueTime: v })} /></div>
         </Field>
         <Field label="Hol lesz?" required id="f-addr"><input className="ctl" id="f-addr" value={f.address} onChange={e => up({ address: e.target.value })} placeholder="Pl. Budapest, Fő utca 1." /></Field>
         <div className="row2">

@@ -6,6 +6,7 @@ import "@fontsource/instrument-sans/600.css";
 import "@fontsource/instrument-sans/700.css";
 import "./globals.css";
 import "./styles/invoices.css";
+import "./styles/customers.css";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL || "https://benade.vercel.app";
 
