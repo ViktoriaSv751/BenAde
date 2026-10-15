@@ -38,8 +38,8 @@ export default function ResetPage() {
     <AuthShell title="Új jelszó" lead="Adjon meg egy új jelszót a fiókjához.">
       {ready === false ? (
         <>
-          <div className="ferr" style={{ marginTop: 24 }}>A hivatkozás lejárt vagy már felhasználták. Kérjen újat.</div>
-          <div className="links"><Link href="/forgot">Új hivatkozás kérése</Link></div>
+          <div className="ferr">A hivatkozás lejárt vagy már felhasználták. Kérjen újat.</div>
+          <div className="auth-links"><Link href="/forgot">Új hivatkozás kérése</Link></div>
         </>
       ) : (
         <form onSubmit={onSubmit} noValidate>

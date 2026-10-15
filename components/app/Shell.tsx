@@ -45,6 +45,7 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   const openCapture = useCallback((type?: string, prefill?: Record<string, string>) => set({ uj: type || "menu", ...(prefill || {}) }), [set]);
   const openTask = useCallback((id: string) => set({ t: id }), [set]);
   const openSearch = useCallback(() => setSearch(true), []);
+  useEffect(() => { document.body.dataset.layout = layout; return () => { delete document.body.dataset.layout; }; }, [layout]);
   useEffect(() => { const k = (e: KeyboardEvent) => { const tag = (e.target as HTMLElement)?.tagName; const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable; if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearch(s => !s); } if (!typing && !e.metaKey && !e.ctrlKey) { if (e.key === "n" || e.key === "N") { e.preventDefault(); openCapture(); } if (e.key === "/") { e.preventDefault(); setSearch(true); } } }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [openCapture]);
   const due = useMemo(() => data ? data.tasks.filter(t => t.status === "open" && t.due_at.slice(0, 10) <= todayISO()).length : 0, [data]);
   const unread = useMemo(() => data ? data.notifications.filter(n => n.status !== "opened").length : 0, [data]);
@@ -57,7 +58,7 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
       <div className="shell" data-layout={layout}>
         {layout !== "phone" && (
           <aside className="side">
-            <Link href={base} className="brand"><span className="mark">{Icon.truck(20)}</span><span><span className="w">Ben<b>Ade</b></span><span className="s">Tachográf</span></span></Link>
+            <Link href={base} className="brand"><span><span className="w">Ben<b>Ade</b></span><span className="s">Tachográf</span></span></Link>
             <button className="btn primary new" onClick={() => openCapture()} title="Új rögzítés (N)">{Icon.plus(20)}<span>Új rögzítés</span></button>
             <nav className="nav">{NAV.slice(0, 4).map(n => <Link key={n.href} href={hrefOf(n.href)} aria-current={isActive(n.href) ? "page" : undefined}>{n.icon(20)}<span>{n.label}</span>{n.href === "/app" && due > 0 && <span className="cnt">{due}</span>}</Link>)}
               <Link href={hrefOf("/app/ertesitesek")} aria-current={isActive("/app/ertesitesek") ? "page" : undefined}>{Icon.bell(20)}<span>Értesítések</span>{unread > 0 && <span className="cnt">{unread}</span>}</Link>

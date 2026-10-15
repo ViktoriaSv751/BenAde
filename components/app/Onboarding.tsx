@@ -27,11 +27,12 @@ export function Onboarding({ email, name, inviteToken }: { email: string; name: 
   const accept = async () => { setBusy(true); setErr(""); const { error } = await sb.rpc("accept_invite", { p_token: inviteToken }); setBusy(false); if (error) { setErr(error.message.includes("invalid") ? "A meghívó érvénytelen vagy már felhasználták." : error.message); return; } router.replace("/app"); router.refresh(); };
   const finish = () => { router.replace("/app"); router.refresh(); };
   return (
-    <div className="stage"><div className="bgimg" style={{ backgroundImage: "url(/img/road.jpg)" }} aria-hidden /><div className="bgveil" aria-hidden />
-      <main className="auth" style={{ maxWidth: 520 }}>
-        <div className="head"><Wordmark /></div>
-        <div className="box">
-          {step !== 9 && <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>{[0, 1, 2].map(i => <span key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? "#3B74FF" : "rgba(255,255,255,.14)" }} />)}</div>}
+    <div className="auth-page">
+      <aside className="auth-side" aria-hidden><img src="/img/truck.jpg" alt="" /><Wordmark href="/app" /><div className="claim"><h2>Három perc, és minden határidő a helyén.</h2><p>Munkaterület, első ügyfél, első rendszám – a többit a BenAde számolja.</p></div></aside>
+      <div className="auth-hero"><img src="/img/truck.jpg" alt="" /><Wordmark href="/app" /></div>
+      <main className="auth-body">
+        <div className="ob">
+          {step !== 9 && <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>{[0, 1, 2].map(i => <span key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? "var(--accent)" : "var(--surface-2)" }} />)}</div>}
           {step === 0 && <>
             <h1>Üdv, {name || email}!</h1><p className="lead">Először adjon nevet a munkaterületnek – általában ez a tachográf-szerviz neve. Később bármikor módosítható.</p>
             <form onSubmit={e => { e.preventDefault(); createWs(); }}>
@@ -63,7 +64,7 @@ export function Onboarding({ email, name, inviteToken }: { email: string; name: 
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}><button className="btn ghost" style={{ flex: 1 }} onClick={() => setStep(0)}>Inkább sajátot hozok létre</button><button className="btn primary" style={{ flex: 2 }} disabled={busy} onClick={accept}>{busy ? "…" : "Meghívó elfogadása"}</button></div>
           </>}
         </div>
-        <p className="legal">Bejelentkezve: {email} · <a href="/auth/signout">Kijelentkezés</a></p>
+        <p className="auth-legal">Bejelentkezve: {email} · <a href="/auth/signout">Kijelentkezés</a></p>
       </main>
     </div>
   );

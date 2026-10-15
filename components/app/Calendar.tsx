@@ -35,7 +35,7 @@ export function CalendarView() {
     <div className={`cal ${layout === "phone" ? "compact" : ""}`}>
       <div className="head">{["H", "K", "Sze", "Cs", "P", "Szo", "V"].map(d => <div key={d}>{d}</div>)}</div>
       <div className="grid">{grid.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; const out = dd.getMonth() !== cd.getMonth(); const max = layout === "phone" ? 0 : 3;
-        return <button key={d} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""}`} aria-selected={cursor === d} onClick={() => { setCursor(d); if (layout === "phone") setMode("day"); }} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
+        return <button key={d} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""}`} aria-selected={cursor === d} onClick={() => setCursor(d)} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
           <span className="d">{dd.getDate()}</span>
           {max > 0 && items.slice(0, max).map(x => <span key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && x.due_at.slice(0, 10) < t ? "over" : ""}`} draggable onDragStart={e => { setDrag(x.id); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); set({ t: x.id }); }}>{!x.all_day && <span className="tm">{timeOf(x.due_at)}</span>}<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{subject(x).split(" · ").pop()}</span></span>)}
           {max > 0 && items.length > max && <span className="more">+{items.length - max} további</span>}
@@ -54,7 +54,33 @@ export function CalendarView() {
   );
   const dayEl = <div className="list">{dayList.length ? dayList.map(x => <TaskRow key={x.id} t={x} selected={sel === x.id} compact={layout === "desktop"} />) : <Empty icon={Icon.calendar(26)} title="Ezen a napon nincs teendő" action={<button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Rögzítés erre a napra</button>} />}</div>;
 
-  const main = (
+  const shortTitle = mode === "month" ? `${cd.getFullYear()}. ${MONTHS[cd.getMonth()]}` : mode === "week" ? `${MONTHS[parseISODate(weekDays[0]).getMonth()].slice(0, 3)}. ${parseISODate(weekDays[0]).getDate()}–${parseISODate(weekDays[6]).getDate()}. · ${isoWeek(cursor)}. hét` : fmtLong(cd);
+  const phoneWeek = (
+    <div className="weekstrip cal-week">{weekDays.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; return <button key={d} aria-pressed={cursor === d} className={d === t ? "today" : ""} onClick={() => setCursor(d)}><span>{DAYS_SHORT[dd.getDay()]}</span><b>{dd.getDate()}</b><span className="dots">{items.slice(0, 3).map(x => <i key={x.id} className={TASK_META[x.type].cls} />)}</span></button>; })}</div>
+  );
+  const filters = (
+    <div className={layout === "phone" ? "filterrow" : "chips"} style={layout === "phone" ? undefined : { flex: 1 }}>
+      {TYPES.map(x => <button key={x.v} className="chip" aria-pressed={type === x.v} onClick={() => setType(x.v)}>{x.v !== "all" && <TypeIcon type={x.v} size={14} />}{x.l}</button>)}
+      <select className="ctl" style={layout === "phone" ? undefined : { width: "auto", minHeight: 36, padding: "4px 34px 4px 12px", fontSize: 13 }} value={cid} onChange={e => setCid(e.target.value)}><option value="">Minden cég</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+      <button className="chip" aria-pressed={showDone} onClick={() => setShowDone(s => !s)}>Elvégzettek is</button>
+    </div>
+  );
+  const main = layout === "phone" ? (
+    <div className="content">
+      <div className="calbar">
+        <h2>{shortTitle}</h2>
+        {cursor !== t && <button className="today-btn" onClick={() => setCursor(t)}>Ma</button>}
+        <button className="ibtn" onClick={() => nav(-1)} aria-label="Előző">{Icon.chevL()}</button>
+        <button className="ibtn" onClick={() => nav(1)} aria-label="Következő">{Icon.chev()}</button>
+      </div>
+      <Seg value={mode} onChange={setMode} options={[{ value: "month", label: "Hónap" }, { value: "week", label: "Hét" }, { value: "day", label: "Nap" }]} />
+      {filters}
+      {mode === "month" && monthGridEl}
+      {mode === "week" && phoneWeek}
+      <div className="sec" style={{ marginTop: mode === "day" ? 4 : 14 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>
+      {dayEl}
+    </div>
+  ) : (
     <div className="content">
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button className="ibtn" onClick={() => nav(-1)} aria-label="Előző">{Icon.chevL()}</button>
@@ -63,14 +89,9 @@ export function CalendarView() {
         <button className="btn ghost sm" onClick={() => setCursor(t)}>Ma</button>
         <Seg value={mode} onChange={setMode} options={[{ value: "month", label: "Hónap" }, { value: "week", label: "Hét" }, { value: "day", label: "Nap" }]} />
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <div className="chips" style={{ flex: 1 }}>{TYPES.map(x => <button key={x.v} className="chip" aria-pressed={type === x.v} onClick={() => setType(x.v)}>{x.v !== "all" && <TypeIcon type={x.v} size={14} />}{x.l}</button>)}</div>
-        <select className="ctl" style={{ width: "auto", minHeight: 36, padding: "4px 34px 4px 12px", fontSize: 13 }} value={cid} onChange={e => setCid(e.target.value)}><option value="">Minden cég</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-        <button className="chip" aria-pressed={showDone} onClick={() => setShowDone(s => !s)}>Elvégzettek is</button>
-      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>{filters}</div>
       {mode === "month" ? monthGridEl : mode === "week" ? weekEl : <><div className="sec" style={{ marginTop: 4 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>{dayEl}</>}
-      {mode === "month" && layout === "phone" && <><div className="sec"><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>{dayEl}</>}
-      {layout !== "phone" && <div className="info">{Icon.info()}<span>Húzással áthelyezheti a tételeket másik napra (az emlékeztetők is eltolódnak). A jogi határidőt a lezáráskor számolt ciklus adja – azt a tétel részleteiben lehet felülírni.</span></div>}
+      <div className="info">{Icon.info()}<span>Húzással áthelyezheti a tételeket másik napra (az emlékeztetők is eltolódnak). A jogi határidőt a lezáráskor számolt ciklus adja – azt a tétel részleteiben lehet felülírni.</span></div>
     </div>
   );
   const detail = sel ? data.tasks.find(x => x.id === sel) : undefined;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
 import PasswordInput from "@/components/PasswordInput";
+import SocialAuth from "@/components/SocialAuth";
 import { createClient } from "@/lib/supabase/client";
 import { authMessage } from "@/lib/auth-errors";
 
@@ -31,14 +32,16 @@ export default function RegisterPage() {
   if (done) {
     return (
       <AuthShell title="Még egy lépés" lead={`Küldtünk egy megerősítő levelet ide: ${done}. Nyissa meg, és koppintson a benne lévő gombra – utána máris használhatja az appot.`}>
-        <div className="fok" style={{ marginTop: 24 }}>Nem találja? Nézze meg a Spam vagy Promóciók mappát is. A levél feladója a BenAde rendszere.</div>
-        <div className="links"><Link href="/login">Vissza a bejelentkezéshez</Link></div>
+        <div className="fok">Nem találja? Nézze meg a Spam vagy Promóciók mappát is. A levél feladója a BenAde rendszere.</div>
+        <div className="auth-links"><Link href="/login">Vissza a bejelentkezéshez</Link></div>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell title="Fiók létrehozása" lead="Egy perc, és indulhat az első emlékeztető.">
+    <AuthShell title="Fiók létrehozása" lead="Egy perc, és indulhat az első emlékeztető." claim={{ h: "Holnap reggel már ez ébreszt.", p: "Fiók, első cég, első rendszám – három perc. A többit a BenAde számolja és jelzi." }}>
+      <SocialAuth onError={setErr} />
+      <div className="or">vagy e-maillel</div>
       <form onSubmit={onSubmit} noValidate>
         <div className="field"><label htmlFor="name">Név vagy cégnév</label><input className="ctl" id="name" name="name" autoComplete="name" placeholder="Pl. BenAde Kft." /></div>
         <div className="field"><label htmlFor="email">E-mail-cím</label><input className="ctl" id="email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="nev@ceg.hu" required /></div>
@@ -47,7 +50,7 @@ export default function RegisterPage() {
         {err && <div className="ferr" role="alert">{err}</div>}
         <button className="btn primary block" type="submit" disabled={busy}>{busy ? "Létrehozás…" : "Fiók létrehozása"}</button>
       </form>
-      <div className="links"><span>Van már fiókja? <Link href="/login">Bejelentkezés</Link></span></div>
+      <div className="auth-links"><span>Van már fiókja? <Link href="/login">Bejelentkezés</Link></span></div>
     </AuthShell>
   );
 }

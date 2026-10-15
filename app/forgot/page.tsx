@@ -21,15 +21,15 @@ export default function ForgotPage() {
   }
 
   return (
-    <AuthShell title="Elfelejtett jelszó" lead="Adja meg az e-mail-címét, és küldünk egy hivatkozást, amivel új jelszót állíthat be.">
-      {sent ? <div className="fok" style={{ marginTop: 24 }}>Ha ezzel a címmel van fiók, pár percen belül megérkezik a levél. Nyissa meg, és kövesse a hivatkozást.</div> : (
+    <AuthShell title="Elfelejtett jelszó" lead="Adja meg az e-mail-címét, és küldünk egy hivatkozást, amivel új jelszót állíthat be." claim={{ h: "Semmi gond, pár kattintás.", p: "A hivatkozás 1 óráig érvényes. Ha nem érkezik meg, nézze meg a Spam mappát is." }}>
+      {sent ? <div className="fok">Ha ezzel a címmel van fiók, pár percen belül megérkezik a levél. Nyissa meg, és kövesse a hivatkozást.</div> : (
         <form onSubmit={onSubmit} noValidate>
           <div className="field"><label htmlFor="email">E-mail-cím</label><input className="ctl" id="email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="nev@ceg.hu" required /></div>
           {err && <div className="ferr" role="alert">{err}</div>}
           <button className="btn primary block" type="submit" disabled={busy}>{busy ? "Küldés…" : "Hivatkozás küldése"}</button>
         </form>
       )}
-      <div className="links"><Link href="/login">Vissza a bejelentkezéshez</Link></div>
+      <div className="auth-links"><Link href="/login">Vissza a bejelentkezéshez</Link></div>
     </AuthShell>
   );
 }
