@@ -55,7 +55,24 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   const openSearch = useCallback(() => setSearch(true), []);
   useEffect(() => { document.body.dataset.layout = layout; return () => { delete document.body.dataset.layout; }; }, [layout]);
   // every new page opens at its top
-  useEffect(() => { window.scrollTo(0, 0); document.querySelectorAll<HTMLElement>(".main .content, .main .pane").forEach(el => { el.scrollTop = 0; }); }, [path]);
+  // wheel / trackpad over a non-scrolling part of the page (header, margins, side column) scrolls the main list instead of doing nothing
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>(".shell .main"); if (!main) return;
+    const scrollable = (e: HTMLElement) => { const s = getComputedStyle(e); return /(auto|scroll)/.test(s.overflowY) && e.scrollHeight > e.clientHeight + 2; };
+    let cache: { t: number; el?: HTMLElement } | null = null;
+    const onWheel = (ev: WheelEvent) => {
+      if (ev.ctrlKey || Math.abs(ev.deltaY) < Math.abs(ev.deltaX)) return;
+      for (let n = ev.target as HTMLElement | null; n && n !== main; n = n.parentElement) {
+        if (scrollable(n)) { const atTop = n.scrollTop <= 0, atEnd = n.scrollTop + n.clientHeight >= n.scrollHeight - 1; if ((ev.deltaY < 0 && !atTop) || (ev.deltaY > 0 && !atEnd)) return; }
+        if (n.closest(".panel, .asheet, .modal, [role=dialog]")) return;
+      }
+      if (!cache || Date.now() - cache.t > 800) { const cands = Array.from(main.querySelectorAll<HTMLElement>(".content, .pane, .content > *, .content > * > *")).filter(scrollable); cache = { t: Date.now(), el: cands.sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0] }; }
+      const best = cache.el; if (!best) return;
+      best.scrollBy({ top: ev.deltaY * (ev.deltaMode === 1 ? 32 : 1) }); ev.preventDefault();
+    };
+    main.addEventListener("wheel", onWheel, { passive: false }); return () => main.removeEventListener("wheel", onWheel);
+  }, [path, layout]);
+  useEffect(() => { window.scrollTo(0, 0);document.querySelectorAll<HTMLElement>(".main .content, .main .pane").forEach(el => { el.scrollTop = 0; }); }, [path]);
   const online = useOnline(); const mutate = useMutate(); const toast = useToast(); const router = useRouter();
   const [plusMenu, setPlusMenu] = useState(false); const plusTimer = useRef<ReturnType<typeof setTimeout> | null>(null); const plusLong = useRef(false);
   // actions coming from a notification button: ?t=<id>&do=done|tomorrow

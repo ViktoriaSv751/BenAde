@@ -197,7 +197,7 @@ select.ctl { padding-right: 38px; background-image: linear-gradient(45deg, trans
 .shell[data-layout="tablet"] .side .user { flex-direction: column; padding: 8px 0; } .shell[data-layout="tablet"] .side .user div { display: none; }
 .shell[data-layout="tablet"] .side .foot { align-items: center; width: 100%; } .shell[data-layout="tablet"] .side .foot .btn.quiet { width: 48px; min-height: 44px; padding: 0 !important; justify-content: center !important; } .shell[data-layout="tablet"] .side .foot .btn.quiet span { display: none; }
 
-.main { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto 1fr; position: relative; }
+.main { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); position: relative; }
 .topbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px 10px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); min-height: 64px; }
 .topbar h1 { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
 .topbar .sub { font-size: 13px; color: var(--muted); font-weight: 600; }
@@ -775,3 +775,9 @@ body[data-layout="phone"] .asheet .box { width: 100%; border-radius: 24px 24px 0
 /* no zoom-in when a field gets focus (iOS zooms below 16px) */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @media (max-width: 899px), (pointer: coarse) { input, select, textarea, .ctl { font-size: 16px !important; } }
+
+/* Horizontal chip / tab rows must never become tiny vertical scrollers that swallow mouse-wheel scrolling */
+.filterrow, .chips, .tabs, .seg, .weekstrip, .daystrip, .ctabs, .inv-tablewrap { overflow-y: hidden !important; }
+/* tablet rail: brand fits the narrow column */
+.shell[data-layout="tablet"] .side .brand { display: flex; justify-content: center; overflow: hidden; }
+.shell[data-layout="tablet"] .side .brand .w { font-size: 12px !important; letter-spacing: -.02em; white-space: nowrap; }
