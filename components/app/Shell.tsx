@@ -57,20 +57,24 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   // every new page opens at its top
   // wheel / trackpad over a non-scrolling part of the page (header, margins, side column) scrolls the main list instead of doing nothing
   useEffect(() => {
-    const main = document.querySelector<HTMLElement>(".shell .main"); if (!main) return;
+    const main = document.querySelector<HTMLElement>(".shell .main"); const root = document.querySelector<HTMLElement>(".shell"); if (!main || !root) return;
     const scrollable = (e: HTMLElement) => { const s = getComputedStyle(e); return /(auto|scroll)/.test(s.overflowY) && e.scrollHeight > e.clientHeight + 2; };
     let cache: { t: number; el?: HTMLElement } | null = null;
     const onWheel = (ev: WheelEvent) => {
       if (ev.ctrlKey || Math.abs(ev.deltaY) < Math.abs(ev.deltaX)) return;
-      for (let n = ev.target as HTMLElement | null; n && n !== main; n = n.parentElement) {
-        if (scrollable(n)) { const atTop = n.scrollTop <= 0, atEnd = n.scrollTop + n.clientHeight >= n.scrollHeight - 1; if ((ev.deltaY < 0 && !atTop) || (ev.deltaY > 0 && !atEnd)) return; }
+      const dy = ev.deltaY * (ev.deltaMode === 1 ? 32 : ev.deltaMode === 2 ? 600 : 1);
+      let hx = false; // passed over a sideways-scrolling chip/tab row – Chrome latches the wheel onto it, so we scroll ourselves
+      for (let n = ev.target as HTMLElement | null; n && n !== root; n = n.parentElement) {
         if (n.closest(".panel, .asheet, .modal, [role=dialog]")) return;
+        const st = getComputedStyle(n);
+        if (/(auto|scroll)/.test(st.overflowX) && n.scrollWidth > n.clientWidth + 1) hx = true;
+        if (scrollable(n)) { const atTop = n.scrollTop <= 0, atEnd = n.scrollTop + n.clientHeight >= n.scrollHeight - 1; if ((dy < 0 && !atTop) || (dy > 0 && !atEnd)) { if (hx) { n.scrollBy({ top: dy }); ev.preventDefault(); } return; } }
       }
       if (!cache || Date.now() - cache.t > 800) { const cands = Array.from(main.querySelectorAll<HTMLElement>(".content, .pane, .content > *, .content > * > *")).filter(scrollable); cache = { t: Date.now(), el: cands.sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0] }; }
       const best = cache.el; if (!best) return;
-      best.scrollBy({ top: ev.deltaY * (ev.deltaMode === 1 ? 32 : 1) }); ev.preventDefault();
+      best.scrollBy({ top: dy }); ev.preventDefault();
     };
-    main.addEventListener("wheel", onWheel, { passive: false }); return () => main.removeEventListener("wheel", onWheel);
+    root.addEventListener("wheel", onWheel, { passive: false }); return () => root.removeEventListener("wheel", onWheel);
   }, [path, layout]);
   useEffect(() => { window.scrollTo(0, 0);document.querySelectorAll<HTMLElement>(".main .content, .main .pane").forEach(el => { el.scrollTop = 0; }); }, [path]);
   const online = useOnline(); const mutate = useMutate(); const toast = useToast(); const router = useRouter();

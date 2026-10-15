@@ -552,7 +552,7 @@ body:not([data-layout="phone"]) .panel .pfoot { padding-bottom: calc(14px + env(
 .shell { height: 100dvh; overflow: hidden; }
 .main { overflow: hidden; }
 .content, .split > .pane, .panel, .palette .res { overflow-x: hidden; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.chips, .filterrow, .tabs { touch-action: pan-x pan-y; overscroll-behavior-x: contain; }
+.chips, .filterrow, .tabs { touch-action: pan-x pan-y; }
 .stats > * { min-width: 0; }
 .shell[data-layout="phone"] .stats.money { grid-template-columns: 1fr 1fr; } .shell[data-layout="phone"] .stats.money > :nth-child(3) { grid-column: 1 / -1; }
 .tabbar .plus { box-shadow: none !important; }
@@ -813,3 +813,5 @@ html:has(.auth-page), body:has(.auth-page), .auth-page { background: #000 !impor
   .or { margin: 0; }
   .auth-legal { font-size: 11.5px; line-height: 1.45; }
 }
+/* desktop side menu: scrolls itself when taller than the window */
+.side { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
