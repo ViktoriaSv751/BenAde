@@ -74,7 +74,7 @@ export function TodayView() {
         <button className="stat danger" onClick={() => { setDay(null); setFilter("over"); }}><div className="v"><CountUp value={over.length} /></div><div className="l">Lejárt</div></button>
         <button className="stat time" onClick={() => { setDay(null); setFilter("today"); }}><div className="v"><CountUp value={today.length} /></div><div className="l">Ma esedékes</div></button>
         <button className="stat accent" onClick={() => { setDay(null); setFilter("week"); }}><div className="v"><CountUp value={week.length} /></div><div className="l">7 napon belül</div></button>
-        {layout === "desktop" && <Link className="stat" href={`${base}/szamlak`}><div className="v" style={{ fontSize: 20 }}>{fmtFt(outstanding)}</div><div className="l">Kintlévőség</div></Link>}
+        {layout === "desktop" && <Link className="stat" href={`${base}/szamlak`}><div className="v" style={{ fontSize: 17 }}>{fmtFt(outstanding)}</div><div className="l">Kintlévőség</div></Link>}
       </div>}
       {!onboarding && <div className="weekstrip">{days.map(d => { const items = open.filter(x => x.due_at.slice(0, 10) === d); const dd = parseISODate(d); const hasOver = d < t && items.length > 0; return <button key={d} aria-pressed={day === d} className={`${d === t ? "today" : ""} ${hasOver ? "hasover" : ""}`} onClick={() => { setDay(day === d ? null : d); setFilter("open"); }} aria-label={`${fmtLong(dd)}: ${items.length} tétel`}><span>{DAYS_SHORT[dd.getDay()]}</span><b>{dd.getDate()}</b><span className="cn">{items.length || ""}</span></button>; })}</div>}
       {!onboarding && layout !== "desktop" && calls.length > 0 && filter === "open" && !day && <>

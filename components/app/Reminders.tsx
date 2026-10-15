@@ -41,7 +41,7 @@ export function RemindersView() {
   const pane = (
     <div className="content">
       <div className="sec" style={{ marginTop: 0 }}><h2>Új emlékeztető</h2></div>
-      <div className="pick3">{PICK.map(p => <button key={p.k} className={`pick ${p.cls}`} onClick={() => openCapture(p.k)}><span className="ico"><TypeIcon type={p.k} size={26} /></span><span className="tx"><b>{p.t}</b><span>{p.s}</span></span><span className="go">{Icon.chev(18)}</span></button>)}</div>
+      <div className="pick3">{PICK.map(p => <button key={p.k} className={`rpick ${p.cls}`} onClick={() => openCapture(p.k)}><span className="ico"><TypeIcon type={p.k} size={26} /></span><span className="tx"><b>{p.t}</b><span>{p.s}</span></span><span className="go">{Icon.chev(18)}</span></button>)}</div>
       <div className="minor"><button className="chip" onClick={() => openCapture("calibration")}>{Icon.gauge(15)} Kalibráció</button><button className="chip" onClick={() => openCapture("card_expiry")}>{Icon.idcard(15)} Kártya lejárat</button>{layout === "phone" && <Link className="chip" href={`${base}/naptar`}>{Icon.calendar(15)} Naptár nézet</Link>}</div>
       <div className="sec"><h2>Emlékeztetők időrendben</h2><span className="n">{list.length}</span></div>
       <Seg value={status} onChange={setStatus} options={[{ value: "upcoming", label: "Közelgő", count: counts.upcoming }, { value: "over", label: "Lejárt", count: counts.over }, { value: "done", label: "Elvégzett" }]} />
