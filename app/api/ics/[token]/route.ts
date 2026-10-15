@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminClient } from "@/lib/supabase/admin";
+import { createClient } from "@supabase/supabase-js";
 import { TASK_META } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
@@ -9,13 +9,12 @@ const day = (iso: string) => iso.slice(0, 10).replace(/-/g, "");
 
 export async function GET(_: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params; if (!/^[a-f0-9]{24,64}$/i.test(token)) return new NextResponse("Not found", { status: 404 });
-  let sb; try { sb = adminClient(); } catch { return new NextResponse("ICS feed nincs konfigurálva", { status: 503 }); }
-  const { data: ws } = await sb.from("workspaces").select("id,name").eq("ics_token", token).maybeSingle();
-  if (!ws) return new NextResponse("Not found", { status: 404 });
-  const since = new Date(Date.now() - 90 * 86400000).toISOString();
-  const [{ data: tasks }, { data: comps }, { data: veh }, { data: drv }] = await Promise.all([
-    sb.from("tasks").select("*").eq("workspace_id", ws.id).gte("due_at", since).order("due_at"),
-    sb.from("companies").select("id,name").eq("workspace_id", ws.id), sb.from("vehicles").select("id,plate").eq("workspace_id", ws.id), sb.from("drivers").select("id,name").eq("workspace_id", ws.id)]);
+  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const { data: feed } = await sb.rpc("ics_feed", { p_token: token });
+  if (!feed) return new NextResponse("Not found", { status: 404 });
+  type Row = { id: string; type: string; status: string; company_id: string; vehicle_id: string | null; driver_id: string | null; invoice_no: string | null; topic: string | null; due_at: string; all_day: boolean; updated_at: string; created_at: string; note: string | null; address: string | null; contact_name: string | null; contact_phone: string | null; gross_amount: number | null; remind_at: string[] };
+  const f = feed as { workspace: { id: string; name: string }; tasks: Row[]; companies: { id: string; name: string }[]; vehicles: { id: string; plate: string }[]; drivers: { id: string; name: string }[] };
+  const ws = f.workspace, tasks = f.tasks, comps = f.companies, veh = f.vehicles, drv = f.drivers;
   const cn = new Map((comps || []).map(c => [c.id, c.name])), vn = new Map((veh || []).map(v => [v.id, v.plate])), dn = new Map((drv || []).map(d => [d.id, d.name]));
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//BenAde//Tachograf//HU", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc("BenAde – " + ws.name)}`, "X-WR-TIMEZONE:Europe/Budapest", "REFRESH-INTERVAL;VALUE=DURATION:PT1H"];
   for (const t of tasks || []) {

@@ -1,37 +1,29 @@
-# BenAde 2.0 – üzembe helyezési lista (tulajdonosi lépések)
+# BenAde 2.0 – üzembe helyezés
 
-A kód, az adatbázis és a cron kész. Az alábbiak titkos kulcsok, ezeket csak Te tudod beírni.
+Minden be van kötve, külső kulcs nélkül is teljes értékűen működik:
 
-## 1. Vercel környezeti változók
+- **Adatbázis, fiókok, realtime** – Supabase projekt `BenAde` (séma: `supabase/schema_v2.sql`).
+- **Értesítésküldő** – Supabase Edge Function `notify-send`, a `pg_cron` percenként hívja. A web push (VAPID) kulcsai a `private.app_config` táblában vannak; a függvény a Supabase saját service-kulcsával fut, így a Vercelbe nem kell titkot beírni.
+- **ICS naptár-feed, PDF, meghívó** – a webappból, bejelentkezéssel.
 
-Vercel → `benade` projekt → Settings → Environment Variables → mindegyiket **Production + Preview** környezetre, majd **Redeploy**.
+## Opcionális: e-mail értesítés (Resend)
 
-| Kulcs | Érték | Honnan |
-|---|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ…` (service_role) | Supabase → Project Settings → API → *service_role* (secret) |
-| `NOTIFY_SECRET` | `6cfcbce8ed293b4b17703c622d3ed841ee3de7457771eff6` | Ez már be van állítva a cron-feladatban; pontosan ezt írd be |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | a chatben küldött `benade-kulcsok.txt` fájlból | – |
-| `VAPID_PRIVATE_KEY` | ugyanabból a fájlból | – |
-| `VAPID_SUBJECT` | `mailto:<saját e-mail>` | – |
-| `RESEND_API_KEY` | `re_…` | resend.com → API Keys (ingyenes csomag elég az indulásra) |
-| `EMAIL_FROM` | `BenAde <ertesites@<saját domain>>` | Resend-ben igazolt domain; amíg nincs: `BenAde <onboarding@resend.dev>` |
-| `FCM_SERVER_KEY` | (opcionális) | Firebase → Project settings → Cloud Messaging – csak a natív Android/iOS pushhoz |
+1. resend.com → API Keys → új kulcs (ingyenes csomag elég).
+2. Supabase → Edge Functions → Secrets: `RESEND_API_KEY` = a kulcs, `EMAIL_FROM` = `BenAde <ertesites@<igazolt domain>>` (domain nélkül: `BenAde <onboarding@resend.dev>`, ez csak a saját címedre küld).
+3. Ettől a pillanattól az e-mail csatorna is megy – újratelepítés nem kell.
 
-A `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` már be van állítva.
+A meghívó e-mail (Csapat → meghívás) a Vercel oldalon megy: ugyanazt a `RESEND_API_KEY` + `EMAIL_FROM` párost a Vercel → Settings → Environment Variables alá is vedd fel, majd Redeploy. Enélkül a meghívó linket az app kiírja, és kézzel elküldhető.
 
-## 2. Ellenőrzés
+## Opcionális: natív push (iOS/Android app)
 
-1. Redeploy után nyisd meg: `https://benade.vercel.app/api/notify/send` → `{"ok":true,"hint":…}`.
-2. Az appban Beállítások → Értesítések → „Próbaértesítés küldése”. 1 percen belül push + e-mail érkezik.
-3. Supabase → SQL: `select status, count(*) from notifications group by 1;` – a `sent` sorok nőnek.
+Firebase projekt → Cloud Messaging → szerverkulcs → Supabase Edge Functions Secrets: `FCM_SERVER_KEY`. Az iOS-hez az APNs kulcsot a Firebase-ben kell feltölteni. A webes push ettől függetlenül már működik (telefonon is, ha a kezdőképernyőre teszed az oldalt).
 
-## 3. Supabase (egyszeri)
+## Ellenőrzés
 
-- Authentication → Providers → Email: *Confirm email* maradhat bekapcsolva.
-- Authentication → URL Configuration: Site URL `https://benade.vercel.app`, Redirect: `https://benade.vercel.app/**` – **kész**.
-- Authentication → Attack protection: *Leaked password protection* bekapcsolása (ajánlott).
-- Saját domain esetén (pl. benade.hu): Site URL + `NEXT_PUBLIC_SITE_URL` + `capacitor.config.ts` `server.url` + `setup_cron` újrafuttatása az új URL-lel.
+- Supabase → SQL: `select status, count(*) from notifications group by 1;` – a `sent` nő, ha esedékes tétel volt.
+- Supabase → Edge Functions → notify-send → Logs: percenként `POST | 200`.
+- Appban: Beállítások → Értesítések → push bekapcsolása → „Próbaértesítés”.
 
-## 4. Tesztfiók
+## Saját domain esetén
 
-Az ellenőrzéshez létrehoztam egy ideiglenes fiókot (`e2e-teszt@benade.test`). Ha már nem kell: Supabase → Authentication → Users → törlés.
+Vercel domain + Supabase Auth Site URL/Redirect + `NEXT_PUBLIC_SITE_URL` + `capacitor.config.ts` `server.url` + a `notify-send` `SITE_URL` secretje.

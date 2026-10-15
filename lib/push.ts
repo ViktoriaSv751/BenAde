@@ -21,7 +21,9 @@ export async function subscribeWebPush(): Promise<PushState> {
   if (isNative()) return registerNativePush();
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
   const perm = await Notification.requestPermission(); if (perm !== "granted") return perm === "denied" ? "denied" : "off";
-  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY; if (!key) return "off";
+  let key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
+  if (!key) { const { data } = await createClient().rpc("vapid_public_key"); key = (data as string) || ""; }
+  if (!key || /PLACEHOLDER/.test(key)) return "off";
   const reg = await navigator.serviceWorker.register("/sw.js"); await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(key) });
   await saveDevice("web", JSON.stringify(sub.toJSON()));
