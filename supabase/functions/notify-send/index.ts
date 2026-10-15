@@ -19,8 +19,13 @@ Deno.serve(async (req: Request) => {
   if (!conf.notify_secret || auth !== `Bearer ${conf.notify_secret}`) return Response.json({ ok: false }, { status: 401 });
 
   const now = new Date().toISOString();
-  const { data: due, error } = await sb.from("notifications").select("*").in("channel", ["push", "email"]).eq("status", "scheduled").lte("scheduled_at", now).order("scheduled_at").limit(100);
+  // recover rows left in "sending" by a crashed run
+  await sb.from("notifications").update({ status: "scheduled" }).eq("status", "sending").lt("scheduled_at", new Date(Date.now() - 30 * 60_000).toISOString());
+  const { data: cand, error } = await sb.from("notifications").select("id").in("channel", ["push", "email"]).eq("status", "scheduled").lte("scheduled_at", now).order("scheduled_at").limit(100);
   if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
+  if (!cand?.length) return Response.json({ ok: true, sent: 0 });
+  // claim atomically – parallel runs (instant trigger + 30 s cron) never send the same row twice
+  const { data: due } = await sb.from("notifications").update({ status: "sending" }).in("id", cand.map(c => c.id)).eq("status", "scheduled").select("*");
   if (!due?.length) return Response.json({ ok: true, sent: 0 });
 
   const wsIds = [...new Set(due.map(n => n.workspace_id))];
@@ -40,7 +45,7 @@ Deno.serve(async (req: Request) => {
   for (const n of due) {
     const targets = (members || []).filter(m => m.workspace_id === n.workspace_id && (!n.user_id || m.user_id === n.user_id)).map(m => m.user_id);
     const defaults = (ws || []).find(w => w.id === n.workspace_id)?.defaults as { quietFrom?: string; quietTo?: string } | undefined;
-    if (n.channel === "push" && inQuiet(defaults?.quietFrom, defaults?.quietTo)) { await sb.from("notifications").update({ scheduled_at: nextQuietEnd(defaults?.quietTo || "06:00") }).eq("id", n.id); continue; }
+    if (n.channel === "push" && n.title !== "BenAde teszt" && inQuiet(defaults?.quietFrom, defaults?.quietTo)) { await sb.from("notifications").update({ status: "scheduled", scheduled_at: nextQuietEnd(defaults?.quietTo || "06:00") }).eq("id", n.id); continue; }
     const url = n.task_id ? `${SITE}/app?t=${n.task_id}` : `${SITE}/app`;
     let ok = 0, err = "";
     for (const uid of targets) {
@@ -49,7 +54,7 @@ Deno.serve(async (req: Request) => {
         if (prefs.push === false) continue;
         for (const d of (devices || []).filter(x => x.user_id === uid)) {
           try {
-            if (d.platform === "web" && vapidOk) { await webpush.sendNotification(JSON.parse(d.token), JSON.stringify({ title: n.title, body: n.body, url, tag: n.task_id || n.id })); ok++; }
+            if (d.platform === "web" && vapidOk) { await webpush.sendNotification(JSON.parse(d.token), JSON.stringify({ title: n.title, body: n.body, url, tag: n.task_id || n.id }), { urgency: "high", TTL: 86400 }); ok++; }
             else if (d.platform !== "web" && fcm) { const r = await fetch("https://fcm.googleapis.com/fcm/send", { method: "POST", headers: { authorization: `key=${fcm}`, "content-type": "application/json" }, body: JSON.stringify({ to: d.token, notification: { title: n.title, body: n.body }, data: { url } }) }); if (r.ok) ok++; else err = `fcm ${r.status}`; }
           } catch (e) { const x = e as { statusCode?: number; body?: string; message?: string }; const msg = `${x.statusCode || ""} ${String(x.body || x.message || e).slice(0, 300)}`.trim(); if (/^(410|404)|VapidPkHashMismatch|BadDeviceToken/.test(msg)) await sb.from("devices").delete().eq("id", d.id); err = msg; }
         }
