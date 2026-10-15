@@ -481,3 +481,11 @@ create policy att_rw on storage.objects for all to authenticated
   with check (bucket_id = 'attachments' and public.is_member((storage.foldername(name))[1]::uuid, 'member'));
 
 select 'schema v2 ok' as result;
+
+-- ---------- hardening (2026-10-15) ----------
+revoke execute on function public.setup_cron(text,text) from public, anon, authenticated;
+revoke execute on function public.accept_invite(text), public.create_workspace(text), public.delete_my_account(), public.search_all(uuid,text), public.is_member(uuid, public.member_role) from public, anon;
+grant execute on function public.accept_invite(text), public.create_workspace(text), public.delete_my_account(), public.search_all(uuid,text), public.is_member(uuid, public.member_role) to authenticated;
+alter function public.touch_updated_at() set search_path = public;
+alter function public.task_title(public.tasks) set search_path = public;
+alter function public.task_subject(public.tasks) set search_path = public;
