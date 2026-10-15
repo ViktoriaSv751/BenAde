@@ -22,7 +22,7 @@ Firebase projekt → Cloud Messaging → szerverkulcs → Supabase Edge Function
 
 - Supabase → SQL: `select status, count(*) from notifications group by 1;` – a `sent` nő, ha esedékes tétel volt.
 - Supabase → Edge Functions → notify-send → Logs: percenként `POST | 200`.
-- Appban: Beállítások → Értesítések → push bekapcsolása → „Próbaértesítés”.
+- Appban: Értesítések → „Push ezen az eszközön” → Bekapcsolás (telefonon a kezdőképernyőre tett oldalon is).
 
 ## Saját domain esetén
 
