@@ -3,7 +3,7 @@ export function GET() {
     name: "BenAde – Tachográf Emlékeztető",
     short_name: "BenAde",
     description: "Tachográf-határidők egy helyen.",
-    start_url: "/app",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#0B1530",
