@@ -781,3 +781,17 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* tablet rail: brand fits the narrow column */
 .shell[data-layout="tablet"] .side .brand { display: flex; justify-content: center; overflow: hidden; }
 .shell[data-layout="tablet"] .side .brand .w { font-size: 12px !important; letter-spacing: -.02em; white-space: nowrap; }
+
+/* Phone auth: the photo is its own block, the title sits below it on black – never over the picture */
+@media (max-width: 899px) {
+  .auth-wrap { justify-content: flex-start; gap: 0; padding-top: 0; }
+  .auth-mark { height: clamp(250px, 44dvh, 430px); display: flex; align-items: flex-start; justify-content: center; padding-top: calc(40px + env(safe-area-inset-top, 0px)); flex: none; }
+  .auth-bg { height: clamp(250px, 44dvh, 430px); min-height: 0; }
+  .auth-bg::after { background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 26%, rgba(0,0,0,0) 58%, rgba(0,0,0,.85) 88%, #000 100%); }
+  .auth-card { margin-top: auto; padding-top: 22px; gap: 14px; }
+  .auth-head { margin-bottom: 8px; }
+  .auth-head h1 { font-size: clamp(38px, 11vw, 46px); line-height: 1.02; font-weight: 800; letter-spacing: -.05em; color: #fff; }
+  .auth-head h1 b { font-weight: 800; background: linear-gradient(100deg, #DCE6FF 0%, #7FA5FF 45%, #3D74FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 18px rgba(61,116,255,.35)); }
+  .auth-head::after { content: ""; display: block; width: 44px; height: 4px; border-radius: 4px; margin-top: 14px; background: linear-gradient(90deg, #3D74FF, rgba(61,116,255,0)); }
+}
+.auth-head h1 b { font-weight: inherit; }

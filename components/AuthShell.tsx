@@ -16,7 +16,7 @@ export default function AuthShell({ title, lead, children, footer }: { title: st
           <p className="claim desk">Minden tachográf-határidő.<br />Pontosan időben.</p>
         </header>
         <main className="auth-card">
-          <div className="auth-head"><h1>{title}</h1>{lead && <p className="lead desk">{lead}</p>}</div>
+          <div className="auth-head"><h1>{(() => { const i = title.lastIndexOf(" "); return i < 0 ? <b>{title}</b> : <>{title.slice(0, i)} <b>{title.slice(i + 1)}</b></>; })()}</h1>{lead && <p className="lead desk">{lead}</p>}</div>
           {children}
           {footer}
           <p className="auth-legal">A folytatással elfogadja a <Link href="/terms">felhasználási feltételeket</Link> és az <Link href="/privacy">adatkezelési tájékoztatót</Link>.</p>
