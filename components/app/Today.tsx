@@ -9,6 +9,7 @@ import { useData, useMutate, useSubject, useToast } from "@/lib/data";
 import { Chips, CountUp, Empty, Icon, Ring, Skeleton } from "@/components/ui";
 import { TaskRow, haptic } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
+import { PushSetup } from "./PushSetup";
 import { TopBar, useShell, useUrlState } from "./Shell";
 
 type Filter = "open" | "over" | "today" | "week" | "done";
@@ -56,6 +57,7 @@ export function TodayView() {
           {(doneToday.length + dueToday) > 0 && <><div className="bar" aria-hidden><i style={{ width: `${progress}%` }} /></div><div className="pr"><span>Mai haladás</span><span className="mono">{doneToday.length} / {doneToday.length + dueToday}</span></div></>}
         </section>
       )}
+      {!onboarding && <PushSetup variant="banner" />}
       {onboarding && <Onboard />}
       {!onboarding && dueToday === 0 && doneToday.length > 0 && filter === "open" && !day && <div className="alldone"><span className="ck">{Icon.check(28)}</span><h3>Ma minden kész</h3><p>{tomorrow.length ? `Holnap ${tomorrow.length} tétel vár: ${tomorrow.slice(0, 2).map(x => TASK_META[x.type].short).join(", ")}${tomorrow.length > 2 ? "…" : ""}` : "Holnapra sincs határidő."}</p></div>}
       {next && !onboarding && dueToday > 0 && (

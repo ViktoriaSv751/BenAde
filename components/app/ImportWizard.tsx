@@ -50,7 +50,7 @@ export function ImportWizard() {
           <input ref={file} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
         </div>
         <div className="info">{Icon.info()}<span>A tábla első sora a fejléc. Egy sor = egy cég és opcionálisan egy jármű / sofőr és az utolsó letöltés dátuma. A következő határidőket a rendszer számolja (+90 / +28 nap). Ugyanaz a cég több sorban is szerepelhet.</span></div>
-        <div className="card pad"><h3 style={{ fontSize: 14, marginBottom: 8 }}>Példa</h3><div style={{ overflow: "auto" }}><table className="table"><thead><tr><th>Cég</th><th>Adószám</th><th>Rendszám</th><th>Utolsó fedélzeti letöltés</th><th>Sofőr</th><th>Utolsó kártyaletöltés</th></tr></thead><tbody><tr><td>Kovács Trans Kft.</td><td className="mono">12345678-2-42</td><td className="mono">ABC-123</td><td className="mono">2026-09-14</td><td>Kovács Béla</td><td className="mono">2026-10-01</td></tr></tbody></table></div></div>
+        <div className="card pad"><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}><h3 style={{ fontSize: 14 }}>Példa – soronként egy jármű vagy gépkocsivezető</h3><button className="btn secondary sm" onClick={downloadTemplate}>{Icon.dl(14)} Kitölthető sablon (.xlsx)</button></div><div style={{ overflow: "auto" }}><table className="table"><thead><tr><th>Cég</th><th>Adószám</th><th>Rendszám</th><th>Utolsó fedélzeti letöltés</th><th>Sofőr</th><th>Utolsó kártyaletöltés</th></tr></thead><tbody><tr><td>Kovács Trans Kft.</td><td className="mono">12345678-2-42</td><td className="mono">ABC-123</td><td className="mono">2026-09-14</td><td>Kovács Béla</td><td className="mono">2026-10-01</td></tr></tbody></table></div></div>
         {err && <div className="info" style={{ borderColor: "var(--danger)" }}>{Icon.warn()}<span>{err}</span></div>}
       </>}
       {rows.length > 0 && !done && <>
@@ -74,4 +74,17 @@ export function ImportWizard() {
       </div>}
     </div>
   </>;
+}
+
+/** Ready-to-fill Excel template with the exact column names the import recognises. */
+async function downloadTemplate() {
+  const XLSX = await import("xlsx");
+  const rows = [
+    ["Cég neve", "Adószám", "Telefon", "Rendszám", "Utolsó fedélzeti letöltés", "Gépkocsivezető neve", "Utolsó kártyaletöltés"],
+    ["Kovács Trans Kft.", "12345678-2-42", "+36 30 123 4567", "ABC-123", "2026-09-14", "Kovács Béla", "2026-10-01"],
+    ["Kovács Trans Kft.", "", "", "DEF-456", "2026-08-30", "Nagy Péter", "2026-09-28"],
+    ["Példa Fuvar Bt.", "87654321-1-13", "+36 20 555 1234", "AA BB-123", "2026-07-21", "", ""],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows); (ws as unknown as { ["!cols"]: { wch: number }[] })["!cols"] = [26, 16, 18, 12, 24, 22, 22].map(wch => ({ wch }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ügyfelek"); XLSX.writeFile(wb, "BenAde-import-sablon.xlsx");
 }

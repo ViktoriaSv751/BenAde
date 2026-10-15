@@ -43,3 +43,10 @@ export async function registerNativePush(): Promise<PushState> {
 }
 
 function urlB64(s: string) { const pad = "=".repeat((4 - (s.length % 4)) % 4); const b = (s + pad).replace(/-/g, "+").replace(/_/g, "/"); const raw = atob(b); return Uint8Array.from([...raw].map(c => c.charCodeAt(0))); }
+
+/** Sends a test push to the signed-in user's devices (delivered by the minute-cron sender). */
+export async function sendTestPush(workspaceId: string): Promise<string | null> {
+  const sb = createClient(); const { data: { user } } = await sb.auth.getUser(); if (!user) return "Nincs bejelentkezve.";
+  const { error } = await sb.from("notifications").insert({ workspace_id: workspaceId, user_id: user.id, channel: "push", scheduled_at: new Date().toISOString(), status: "scheduled", title: "BenAde teszt", body: "Ha ezt látja, az értesítések működnek ezen az eszközön." });
+  return error ? error.message : null;
+}

@@ -5,6 +5,7 @@ import { useData, useMutate, useToast } from "@/lib/data";
 import { Chips, Empty, Icon, Skeleton, Switch } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { TopBar, useShell } from "./Shell";
+import { PushSetup } from "./PushSetup";
 import { subscribeWebPush, pushSupport } from "@/lib/push";
 
 export function NotificationsView() {
@@ -26,15 +27,14 @@ export function NotificationsView() {
   const setPref = (k: keyof typeof prefs, v: boolean) => mutate(r => r.profile.update({ notif_prefs: { ...prefs, [k]: v } }), { optimistic: s => ({ ...s, profile: { ...s.profile, notif_prefs: { ...s.profile.notif_prefs, [k]: v } } }) });
   const enablePush = async () => { if (demo) { toast("A tesztfiókban nincs valódi push – Apple- vagy Google-belépés után bekapcsolható."); return; } const r = await subscribeWebPush(); setPush(r); toast(r === "on" ? "Push értesítés bekapcsolva ezen az eszközön." : r === "denied" ? "A böngésző letiltotta az értesítéseket – engedélyezze a címsorban." : "Nem sikerült bekapcsolni.", r === "on" ? "ok" : "err"); };
   const prefsEl = (
+    <><PushSetup />
     <div className="card" style={{ padding: "4px 16px" }}>
-      <div className="srow"><div><div className="k">Push ezen az eszközön</div><div className="d">{push === "on" ? "Bekapcsolva" : push === "unsupported" ? "Ez a böngésző nem támogatja (iPhone-on: Főképernyőhöz adás után)" : push === "denied" ? "Letiltva a böngészőben" : "Kikapcsolva"}</div></div>{push === "on" ? <span className="pill ok">aktív</span> : <button className="btn secondary sm" onClick={enablePush} disabled={push === "unsupported"}>Bekapcsolás</button>}</div>
-      <div className="srow"><div><div className="k">Teszt értesítés</div><div className="d">Ellenőrizze, hogy ezen az eszközön megérkezik-e</div></div><button className="btn ghost sm" onClick={sendTest}>Küldés</button></div>
       <div className="srow"><div><div className="k">Push értesítések</div><div className="d">Határidők és oktatás-emlékeztetők</div></div><Switch checked={prefs.push} onChange={v => setPref("push", v)} label="Push" /></div>
-      <div className="srow"><div><div className="k">E-mail</div><div className="d">Ugyanazok e-mailben is</div></div><Switch checked={prefs.email} onChange={v => setPref("email", v)} label="E-mail" /></div>
+      <div className="srow"><div><div className="k">E-mail</div><div className="d">Ugyanazok e-mailben is – a levélküldő beállítása után indul</div></div><Switch checked={prefs.email} onChange={v => setPref("email", v)} label="E-mail" /></div>
       <div className="srow"><div><div className="k">Reggeli összefoglaló</div><div className="d">Minden nap 07:00 – a nap teendői</div></div><Switch checked={prefs.dailyDigest} onChange={v => setPref("dailyDigest", v)} label="Napi" /></div>
       <div className="srow"><div><div className="k">Heti előretekintés</div><div className="d">Hétfő 07:00 – a hét letöltései és számlái</div></div><Switch checked={prefs.weeklyDigest} onChange={v => setPref("weeklyDigest", v)} label="Heti" /></div>
       <div className="srow"><div><div className="k">Csendes időszak</div><div className="d">{data.workspace.defaults.quietFrom}–{data.workspace.defaults.quietTo} között nem jön push (beállításokban módosítható)</div></div></div>
-    </div>
+    </div></>
   );
   const feed = (
     <>
