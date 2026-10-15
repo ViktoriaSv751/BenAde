@@ -21,7 +21,7 @@ export function NotificationsView() {
     if (demo) { toast("A tesztfiókban nincs valódi push."); return; }
     const sb = createClient(); const { data: u } = await sb.auth.getUser();
     const { error } = await sb.from("notifications").insert({ workspace_id: data.workspace.id, user_id: u.user?.id, channel: "push", scheduled_at: new Date().toISOString(), status: "scheduled", title: "BenAde teszt", body: "Ha ezt látja, az értesítések működnek ezen az eszközön." });
-    toast(error ? "Nem sikerült: " + error.message : "Teszt értesítés elküldve – egy percen belül megérkezik.", error ? "err" : "ok");
+    toast(error ? "Nem sikerült: " + error.message : "Teszt értesítés elküldve – pár másodpercen belül megérkezik.", error ? "err" : "ok");
   };
   const prefs = data.profile.notif_prefs;
   const setPref = (k: keyof typeof prefs, v: boolean) => mutate(r => r.profile.update({ notif_prefs: { ...prefs, [k]: v } }), { optimistic: s => ({ ...s, profile: { ...s.profile, notif_prefs: { ...s.profile.notif_prefs, [k]: v } } }) });
