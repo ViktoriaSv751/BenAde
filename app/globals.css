@@ -882,3 +882,17 @@ html:has(.auth-page), body:has(.auth-page), .auth-page { background: #000 !impor
 }
 @keyframes authzoom { from { transform: scale(1); } to { transform: scale(1.07) translate(-1%, 1%); } }
 @media (prefers-reduced-motion: reduce) { .auth-mark::before { animation: none; } }
+
+/* ===== Phone auth v4 – no photo, everything centred on black ===== */
+@media (max-width: 899px) {
+  .auth-page .auth-bg { display: none; }
+  .auth-page { background: radial-gradient(90% 55% at 50% 38%, rgba(47,98,240,.16) 0%, rgba(0,0,0,0) 70%), #000 !important; }
+  .auth-wrap { height: 100dvh; justify-content: center; align-items: stretch; gap: clamp(22px, 4.5dvh, 40px); padding: calc(20px + env(safe-area-inset-top, 0px)) 24px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .auth-mark { flex: none; min-height: 0; height: auto; padding: 0; overflow: visible; display: block; text-align: center; }
+  .auth-mark::before, .auth-mark::after { content: none; display: none; }
+  .auth-mark .wm { font-size: clamp(60px, min(19vw, 10dvh), 88px); }
+  .auth-card { margin: 0 auto; padding: 0; width: 100%; max-width: 420px; flex: none; }
+  .auth-head { text-align: center; margin-bottom: clamp(6px, 1.4dvh, 14px); }
+  .auth-head h1 { font-size: clamp(28px, min(8.5vw, 4.4dvh), 36px); }
+  .auth-links, .auth-legal { text-align: center; justify-content: center; }
+}
