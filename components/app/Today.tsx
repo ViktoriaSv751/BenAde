@@ -87,7 +87,7 @@ function SidePlaceholder({ calls }: { calls: { c: { id: string; name: string; ph
         <div style={{ minWidth: 0, flex: 1 }}><Link href={`${base}/ugyfelek/${c!.id}`} style={{ fontWeight: 800, textDecoration: "none" }}>{c!.name}</Link><div style={{ fontSize: 12.5, color: "var(--muted)" }}>{items.map(i => `${TASK_META[i.type].short} · ${subject(i).split(" · ").slice(1).join(" · ") || fmtDate(i.due_at)}`).join(" · ")}</div></div>
         {c!.phone && <a className="btn secondary sm" href={phoneHref(c!.phone)}>{Icon.phone(14)} Hívás</a>}
       </div>)}
-    <div className="info">{Icon.info()}<span><b>Gyorsbillentyűk:</b> N új rögzítés · / keresés · Esc bezárás. Telefonon a tételeket balra húzva elvégzettnek, jobbra húzva holnapra halaszthatja.</span></div>
+    <div className="info">{Icon.info()}<span><b>Gyorsbillentyűk:</b> N új rögzítés · / keresés · Esc bezárás.</span></div>
   </div>;
 }
 

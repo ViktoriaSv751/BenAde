@@ -32,7 +32,7 @@ export function InvoicesView() {
   const selTask = get("t") ? data.tasks.find(x => x.id === get("t")) : undefined;
   const main = (
     <div className="content">
-      <div className="stats">
+      <div className="stats money">
         <div className={`stat ${overdue.length ? "danger" : ""}`}><div className="v" style={{ fontSize: 18 }}>{fmtFt(sum(overdue))}</div><div className="l">Lejárt · {overdue.length} db</div></div>
         <div className="stat"><div className="v" style={{ fontSize: 18 }}>{fmtFt(sum(week))}</div><div className="l">7 napon belül · {week.length} db</div></div>
         <div className="stat"><div className="v" style={{ fontSize: 18 }}>{fmtFt(sum(open))}</div><div className="l">Teljes kintlévőség</div></div>
@@ -58,7 +58,7 @@ export function InvoicesView() {
             </tr>; })}</tbody>
             <tfoot><tr><td colSpan={5} style={{ textAlign: "right", color: "var(--muted)" }}>Összesen</td><td className="mono" style={{ textAlign: "right", fontWeight: 800 }}>{fmtFt(sum(rows))}</td><td colSpan={2}></td></tr></tfoot>
           </table></div>
-        ) : <div className="list">{rows.map(x => <TaskRow key={x.id} t={x} selected={selTask?.id === x.id} compact={layout !== "phone"} swipe={layout === "phone"} />)}</div>}
+        ) : <div className="list">{rows.map(x => <TaskRow key={x.id} t={x} selected={selTask?.id === x.id} compact={layout !== "phone"} swipe={false} />)}</div>}
       {confirmEl}
     </div>
   );

@@ -27,9 +27,9 @@ export function Onboarding({ email, name, inviteToken }: { email: string; name: 
   const finish = () => { router.replace("/app"); router.refresh(); };
   return (
     <div className="auth-page">
-      <div className="auth-bg" aria-hidden><picture><source media="(min-width: 900px)" srcSet="/img/road.jpg" /><img src="/img/truck.jpg" alt="" /></picture></div>
+      <div className="auth-bg" aria-hidden><picture><source media="(min-width: 900px)" srcSet="/img/road.jpg" /><img src="/img/tacho.jpg" alt="" /></picture></div>
       <div className="auth-wrap">
-      <header className="auth-mark"><a href="/app" className="wm" aria-label="BenAde">Ben<b>Ade</b></a><p className="claim">Három perc, és minden<br />határidő a helyén.</p></header>
+      <header className="auth-mark"><a href="/app" className="wm" aria-label="BenAde">Ben<b>Ade</b></a></header>
       <main className="auth-card">
         <div className="ob">
           {step !== 9 && <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>{[0, 1, 2].map(i => <span key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? "var(--accent)" : "rgba(255,255,255,.14)" }} />)}</div>}

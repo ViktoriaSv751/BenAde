@@ -7,7 +7,7 @@ import { useSubject, useMutate, useToast } from "@/lib/data";
 import { Icon, TypeIcon } from "@/components/ui";
 import { useShell } from "./Shell";
 
-export function TaskRow({ t, selected, compact, onOpen, swipe = true }: { t: Task; selected?: boolean; compact?: boolean; onOpen?: () => void; swipe?: boolean }) {
+export function TaskRow({ t, selected, compact, onOpen, swipe = false }: { t: Task; selected?: boolean; compact?: boolean; onOpen?: () => void; swipe?: boolean }) {
   const subject = useSubject(); const meta = TASK_META[t.type]; const rel = relLabel(t.due_at); const done = t.status !== "open";
   const { openTask, touch } = useShell(); const mutate = useMutate(); const toast = useToast();
   const [dx, setDx] = useState(0); const start = useRef<{ x: number; y: number } | null>(null); const [drag, setDrag] = useState(false);
