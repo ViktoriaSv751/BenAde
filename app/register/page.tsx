@@ -8,7 +8,7 @@ import PasswordInput from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 import { authMessage } from "@/lib/auth-errors";
 
-function EmailRegister() {
+function EmailRegister({ next }: { next: string }) {
   const router = useRouter(); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [done, setDone] = useState<string | null>(null);
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setErr(null);
@@ -17,10 +17,10 @@ function EmailRegister() {
     if (!email.includes("@")) return setErr("Adjon meg egy érvényes e-mail-címet.");
     if (password.length < 8) return setErr("A jelszó legalább 8 karakter legyen.");
     setBusy(true);
-    const { data, error } = await createClient().auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/auth/callback?next=/app` } });
+    const { data, error } = await createClient().auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
     setBusy(false);
     if (error) return setErr(authMessage(error.message));
-    if (data.session) { router.replace("/app"); router.refresh(); return; }
+    if (data.session) { router.replace(next); router.refresh(); return; }
     setDone(email);
   }
   if (done) return <div className="fok">Küldtünk egy megerősítő levelet ide: {done}. Nyissa meg, és koppintson a benne lévő gombra. Ha nem találja, nézze meg a Spam mappát is.</div>;
@@ -37,9 +37,10 @@ function EmailRegister() {
 
 function Register() {
   const params = useSearchParams();
+  const raw = params.get("next") || "/app"; const next = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/app";
   return (
-    <AuthShell title="Fiók létrehozása" lead="Egy perc, és indulhat az első emlékeztető." footer={<div className="auth-links"><span>Van már fiókja?</span><Link href="/login">Bejelentkezés</Link></div>}>
-      {params.get("mod") === "email" ? <EmailRegister /> : <SocialAuth verb="Regisztráció" emailHref="/register?mod=email" />}
+    <AuthShell title="Fiók létrehozása" lead="Egy perc, és indulhat az első emlékeztető." footer={<div className="auth-links"><span>Van már fiókja?</span><Link href={next !== "/app" ? `/login?next=${encodeURIComponent(next)}` : "/login"}>Bejelentkezés</Link></div>}>
+      {params.get("mod") === "email" ? <EmailRegister next={next} /> : <SocialAuth verb="Regisztráció" next={next} />}
     </AuthShell>
   );
 }

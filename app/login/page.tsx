@@ -17,7 +17,7 @@ function EmailFallback({ next }: { next: string }) {
     const { error } = await createClient().auth.signInWithPassword({ email: String(fd.get("email")).trim(), password: String(fd.get("password")) });
     setBusy(false);
     if (error) { setErr(authMessage(error.message)); return; }
-    router.replace(next.startsWith("/") ? next : "/app"); router.refresh();
+    router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/app"); router.refresh();
   }
   return (
     <>
