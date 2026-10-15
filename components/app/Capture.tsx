@@ -24,24 +24,48 @@ const KINDS: { k: Kind; label: string; desc: string; cls: string; icon: React.Re
 ];
 
 export function CapturePanel({ open, type, onClose }: { open: boolean; type?: string; onClose: () => void }) {
-  const { set, get } = useUrlState(); const { layout } = useShell();
+  const { set, get } = useUrlState(); const { layout } = useShell(); const loaded = !!useData();
   const kind = (type || "menu") as Kind; const editId = get("edit");
   const title = kind === "menu" ? "Új rögzítés" : editId ? "Szerkesztés" : KINDS.find(k => k.k === kind)?.label || "Rögzítés";
   return (
     <Panel open={open} onClose={onClose} title={title} wide={layout !== "phone"} back={kind !== "menu" && !editId ? () => set({ uj: "menu" }) : undefined}>
-      {kind === "menu" ? <Menu onPick={k => set({ uj: k })} /> : kind === "company" ? <CompanyForm onDone={onClose} /> : kind === "vehicle" ? <VehicleForm onDone={onClose} /> : kind === "driver" ? <DriverForm onDone={onClose} /> : <TaskForm key={`${kind}:${editId || ""}`} type={kind as TaskType} editId={editId} onDone={onClose} />}
+      {!loaded ? <div className="cap-loading" aria-busy="true"><span /><span /><span /></div> : kind === "menu" ? <Menu onPick={k => set({ uj: k })} /> : kind === "company" ? <CompanyForm onDone={onClose} /> : kind === "vehicle" ? <VehicleForm onDone={onClose} /> : kind === "driver" ? <DriverForm onDone={onClose} /> : <TaskForm key={`${kind}:${editId || ""}`} type={kind as TaskType} editId={editId} onDone={onClose} />}
     </Panel>
   );
 }
 
 function Menu({ onPick }: { onPick: (k: Kind) => void }) {
-  return <>
-    <div className="sec" style={{ marginTop: 0 }}><h2>Emlékeztető</h2></div>
-    <div className="tiles">{KINDS.slice(0, 6).map(k => <button key={k.k} className={`tile-btn ${k.cls}`} onClick={() => onPick(k.k)}><span className="ico">{k.icon}</span><b>{k.label}</b><span>{k.desc}</span></button>)}</div>
-    <div className="sec"><h2>Adatbank</h2></div>
-    <div className="tiles">{KINDS.slice(6).map(k => <button key={k.k} className={`tile-btn ${k.cls}`} style={{ minHeight: 96 }} onClick={() => onPick(k.k)}><span className="ico">{k.icon}</span><b>{k.label}</b><span>{k.desc}</span></button>)}</div>
-    <div className="info">{Icon.info()}<span>Gyorsbillentyűk gépen: <b>N</b> új rögzítés, <b>/</b> vagy <b>⌘K</b> keresés, <b>Esc</b> bezárás.</span></div>
-  </>;
+  const data = useData()!; const { layout } = useShell(); const d = data.workspace.defaults;
+  const today = todayISO();
+  const stat = (t: TaskType) => { const open = data.tasks.filter(x => x.type === t && x.status === "open"); return { open: open.length, over: open.filter(x => x.due_at.slice(0, 10) < today).length }; };
+  const cycle: Partial<Record<Kind, string>> = { vu_download: `+${d.vuDays ?? 90} nap`, card_download: `+${d.cardDays ?? 28} nap`, training: "06:00", invoice: `+${d.invoiceDays ?? 30} nap`, calibration: "2 év", card_expiry: "5 év" };
+  const sub: Partial<Record<Kind, string>> = { vu_download: "Letöltés rögzítése", card_download: "Letöltés rögzítése", training: "Értesítés a napján", invoice: "Fizetési határidő" };
+  const hero = KINDS.slice(0, 4), more = KINDS.slice(4, 6), bank = KINDS.slice(6);
+  const counts: Record<string, number> = { company: data.companies.filter(c => !c.archived_at).length, vehicle: data.vehicles.filter(v => !v.archived_at).length, driver: data.drivers.filter(x => !x.archived_at).length };
+  // 1–9 keyboard shortcuts on desktop
+  useEffect(() => { if (layout === "phone") return; const all = [...hero, ...more, ...bank]; const k = (e: KeyboardEvent) => { const tag = (e.target as HTMLElement)?.tagName; if (tag === "INPUT" || tag === "TEXTAREA" || e.metaKey || e.ctrlKey) return; const n = Number(e.key); if (n >= 1 && n <= all.length) { e.preventDefault(); onPick(all[n - 1].k); } }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }); // eslint-disable-line react-hooks/exhaustive-deps
+  const desk = layout !== "phone";
+  return <div className="cm">
+    <header className="cm-head">
+      <span className="cm-eyebrow">{fmtDateDay(today)}</span>
+      <h2 className="cm-title">Mit <em>rögzítünk</em>?</h2>
+    </header>
+    <div className="cm-hero">{hero.map((k, i) => { const st = stat(k.k as TaskType); return (
+      <button key={k.k} type="button" className={`cm-card ${k.cls}`} onClick={() => onPick(k.k)} style={{ animationDelay: `${i * 45}ms` }}>
+        <span className="cm-glow" aria-hidden />
+        <span className="cm-top"><span className="cm-ico">{k.icon}</span><span className="cm-cycle">{cycle[k.k]}</span></span>
+        <span className="cm-name">{k.label}</span>
+        <span className="cm-sub">{sub[k.k]}</span>
+        <span className="cm-foot">{st.open > 0 ? <><span className="cm-dot" />{st.open} nyitott{st.over > 0 && <b> · {st.over} lejárt</b>}</> : <span className="cm-muted">Nincs nyitott tétel</span>}{desk && <kbd>{i + 1}</kbd>}</span>
+      </button>); })}</div>
+    <div className="cm-label">További határidők</div>
+    <div className="cm-pair">{more.map((k, i) => <button key={k.k} type="button" className={`cm-row ${k.cls}`} onClick={() => onPick(k.k)}>
+      <span className="cm-rico">{k.icon}</span><span className="cm-rt"><b>{k.label}</b><small>{k.desc.split(" · ")[0]}</small></span><span className="cm-pill">{cycle[k.k]}</span>{desk && <kbd>{i + 5}</kbd>}</button>)}</div>
+    <div className="cm-label">Adatbank</div>
+    <div className="cm-list">{bank.map((k, i) => <button key={k.k} type="button" className="cm-li" onClick={() => onPick(k.k)}>
+      <span className="cm-lico">{k.icon}</span><span className="cm-rt"><b>{k.label}</b><small>{k.desc}</small></span><span className="cm-count">{counts[k.k]}</span>{desk ? <kbd>{i + 7}</kbd> : <span className="cm-chev">{Icon.chev(18)}</span>}</button>)}</div>
+    {desk && <div className="cm-keys"><span><kbd>1</kbd>–<kbd>9</kbd> gyors választás</span><span><kbd>N</kbd> új rögzítés</span><span><kbd>Esc</kbd> bezárás</span></div>}
+  </div>;
 }
 
 /* ---------- small helpers ---------- */
@@ -330,7 +354,7 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
       {confirmEl}
       {banner}
       {quickable && <button type="button" className="btn quiet sm cap-switch" onClick={() => setFull(false)}>{Icon.back(16)} Vissza a lépésenkénti rögzítéshez</button>}
-      <div className={`nextup ${meta.cls}`} style={{ padding: 14, gridTemplateColumns: "44px 1fr" }}><span className="ico" style={{ width: 44, height: 44, borderRadius: 13, background: "var(--cs)", color: "var(--c)", display: "grid", placeItems: "center" }}><TypeIcon type={type} /></span><div><div className="t" style={{ margin: 0 }}>{meta.name}</div><div className="m">{edit ? "Meglévő tétel szerkesztése" : meta.cycleKey ? `A következő határidőt automatikusan kiszámoljuk (+${d[meta.cycleKey]} nap).` : type === "invoice" ? `A fizetési határidő automatikusan +${invDays(f.companyId)} nap.` : "Értesítés az oktatás előtti nap és a napján reggel 06:00-kor."}</div></div></div>
+      <div className={`cm-fhead ${meta.cls}`}><span className="cm-glow" aria-hidden /><span className="cm-ico"><TypeIcon type={type} /></span><div className="cm-fht"><b>{meta.name}</b><small>{edit ? "Meglévő tétel szerkesztése" : meta.cycleKey ? `A következő határidőt automatikusan kiszámoljuk.` : type === "invoice" ? `A fizetési határidő automatikusan kiszámolva.` : "Értesítés előző nap és a napján reggel 06:00-kor."}</small></div><span className="cm-cycle">{meta.cycleKey ? `+${d[meta.cycleKey]} nap` : type === "invoice" ? `+${invDays(f.companyId)} nap` : "06:00"}</span></div>
       {data.companies.length === 0 && <div className="ferr">Még nincs rögzített cég. <button type="button" className="btn sm ghost" style={{ marginLeft: 8 }} onClick={() => set({ uj: "company" })}>Új cég</button></div>}
       <Field label="Melyik cég?" required id="f-company"><CompanySelect value={f.companyId} onChange={v => up({ companyId: v, vehicleId: "", driverId: "" })} /></Field>
       {subjectSel}
