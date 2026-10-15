@@ -795,3 +795,21 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .auth-head::after { content: ""; display: block; width: 44px; height: 4px; border-radius: 4px; margin-top: 14px; background: linear-gradient(90deg, #3D74FF, rgba(61,116,255,0)); }
 }
 .auth-head h1 b { font-weight: inherit; }
+
+/* Auth: solid black everywhere, and everything fits on one phone screen without scrolling */
+html:has(.auth-page), body:has(.auth-page), .auth-page { background: #000 !important; }
+@media (max-width: 899px) {
+  .auth-page { height: 100dvh; min-height: 0; overflow: hidden; }
+  .auth-wrap { height: 100dvh; min-height: 0; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .auth-mark, .auth-bg { height: clamp(150px, 36dvh, 380px); }
+  .auth-mark { padding-top: calc(26px + env(safe-area-inset-top, 0px)); }
+  .auth-mark .wm { font-size: clamp(54px, min(17vw, 9dvh), 92px); }
+  .auth-card { padding-top: 10px; gap: clamp(8px, 1.6dvh, 14px); }
+  .auth-head { margin-bottom: 2px; }
+  .auth-head h1 { font-size: clamp(30px, min(10.5vw, 5.6dvh), 46px); }
+  .auth-head::after { margin-top: clamp(8px, 1.4dvh, 14px); }
+  .social { gap: clamp(7px, 1.2dvh, 10px); }
+  .social .btn { min-height: clamp(46px, 6.6dvh, 58px); }
+  .or { margin: 0; }
+  .auth-legal { font-size: 11.5px; line-height: 1.45; }
+}

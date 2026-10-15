@@ -30,7 +30,6 @@ export default function SocialAuth({ next = "/app", verb = "Folytatás" }: { nex
       {err && <div className="ferr" role="alert">{err}</div>}
       <div className="or">vagy</div>
       <Link className="btn test" href="/demo">{Play}<span>Belépés tesztfiókkal</span></Link>
-      <p className="test-note">Azonnal kipróbálható, regisztráció és jelszó nélkül – három hónapnyi mintaadattal.</p>
     </div>
   );
 }
