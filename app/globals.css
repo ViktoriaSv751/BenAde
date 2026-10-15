@@ -815,3 +815,38 @@ html:has(.auth-page), body:has(.auth-page), .auth-page { background: #000 !impor
 }
 /* desktop side menu: scrolls itself when taller than the window */
 .side { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+
+/* ===== Desktop: Profile & Help use the full width ===== */
+.content.profile.pdesk { max-width: 1180px; display: grid; grid-template-columns: minmax(340px, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.pdesk > div { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pdesk .pd-left { position: sticky; top: 0; }
+.pdesk .pd-left .pstats { grid-template-columns: 1fr 1fr; }
+.pdesk .pd-right .pgroup { margin: 0; }
+.pdesk .phero { margin: 0; }
+.pdesk .pd-right .prow { min-height: 72px; }
+.pdesk .pd-right .pgroup:first-child { display: grid; grid-template-columns: 1fr 1fr; }
+.pdesk .pd-right .pgroup:first-child .ph { grid-column: 1 / -1; }
+.pdesk .pd-right .pgroup:first-child .prow:nth-child(odd):not(:last-child) { border-left: 1px solid var(--line); }
+.content.profile.help-desk { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); }
+.help-desk .pd-right { position: sticky; top: 0; }
+.help-hero { padding: 26px 26px 22px; border-radius: 24px; background: linear-gradient(150deg, var(--accent-soft) 0%, var(--surface) 75%); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.help-hero h2 { font-family: var(--font-display); font-size: 30px; font-weight: 800; letter-spacing: -.04em; }
+.help-hero p { color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+.help-search { position: relative; display: flex; align-items: center; }
+.help-search > svg { position: absolute; left: 14px; color: var(--muted); pointer-events: none; }
+.help-search .ctl { padding-left: 44px; min-height: 50px; border-radius: 14px; background: var(--bg); }
+.help-empty { padding: 18px; text-align: center; color: var(--muted); font-weight: 600; border: 1px dashed var(--line-strong); border-radius: var(--r-lg); }
+.help-card .help-h { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--muted); }
+.help-card .help-h b { color: var(--fg); font-size: 15px; }
+.help-contact { display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: 22px; color: #fff; background: linear-gradient(150deg, #3D74FF 0%, #1F4FE0 100%); box-shadow: 0 18px 40px -24px #1F5BFF; }
+.help-contact b { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.help-contact span { opacity: .85; font-size: 13.5px; font-weight: 600; margin-bottom: 8px; }
+.help-contact .btn.primary { background: #fff; color: #1F4FE0; }
+.help-links { display: flex; flex-direction: column; padding: 4px 0; }
+.help-links a { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; text-decoration: none; color: inherit; border-top: 1px solid var(--line); }
+.help-links a:first-child { border-top: 0; }
+.help-links a:hover { background: var(--surface-2); }
+.help-links b { display: block; font-size: 14px; font-weight: 800; }
+.help-links small { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+.help-links .pi { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-soft-fg); }
+.content.profile > .help-search { margin-bottom: 4px; }
