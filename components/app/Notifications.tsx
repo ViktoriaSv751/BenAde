@@ -14,7 +14,7 @@ export function NotificationsView() {
   const list = data.notifications; const unread = list.filter(n => n.status !== "opened");
   const prefs = data.profile.notif_prefs;
   const setPref = (k: keyof typeof prefs, v: boolean) => mutate(r => r.profile.update({ notif_prefs: { ...prefs, [k]: v } }), { optimistic: s => ({ ...s, profile: { ...s.profile, notif_prefs: { ...s.profile.notif_prefs, [k]: v } } }) });
-  const enablePush = async () => { if (demo) { toast("Bemutató módban nincs valódi push."); return; } const r = await subscribeWebPush(); setPush(r); toast(r === "on" ? "Push értesítés bekapcsolva ezen az eszközön." : r === "denied" ? "A böngésző letiltotta az értesítéseket – engedélyezze a címsorban." : "Nem sikerült bekapcsolni.", r === "on" ? "ok" : "err"); };
+  const enablePush = async () => { if (demo) { toast("A tesztfiókban nincs valódi push – Apple- vagy Google-belépés után bekapcsolható."); return; } const r = await subscribeWebPush(); setPush(r); toast(r === "on" ? "Push értesítés bekapcsolva ezen az eszközön." : r === "denied" ? "A böngésző letiltotta az értesítéseket – engedélyezze a címsorban." : "Nem sikerült bekapcsolni.", r === "on" ? "ok" : "err"); };
   const prefsEl = (
     <div className="card" style={{ padding: "4px 16px" }}>
       <div className="srow"><div><div className="k">Push ezen az eszközön</div><div className="d">{push === "on" ? "Bekapcsolva" : push === "unsupported" ? "Ez a böngésző nem támogatja (iPhone-on: Főképernyőhöz adás után)" : push === "denied" ? "Letiltva a böngészőben" : "Kikapcsolva"}</div></div>{push === "on" ? <span className="pill ok">aktív</span> : <button className="btn secondary sm" onClick={enablePush} disabled={push === "unsupported"}>Bekapcsolás</button>}</div>
@@ -36,7 +36,7 @@ export function NotificationsView() {
     </>
   );
   return <>
-    <TopBar title="Értesítések" sub={unread.length ? `${unread.length} olvasatlan` : undefined} />
+    <TopBar title="Értesítések" back={layout === "phone" ? `${demo ? "/demo" : "/app"}/profil` : undefined} sub={unread.length ? `${unread.length} olvasatlan` : undefined} />
     {layout === "phone" ? <div className="content"><div className="sec" style={{ marginTop: 0 }}><h2>Csatornák</h2></div>{prefsEl}{feed}</div>
       : <div className="split"><div className="pane"><div className="content">{feed}</div></div><div className="pane detail"><div className="inner"><div className="sec" style={{ marginTop: 0 }}><h2>Csatornák</h2></div>{prefsEl}<div className="info" style={{ marginTop: 14 }}>{Icon.info()}<span>Natív iOS/Android alkalmazásban a push a rendszeren keresztül érkezik; weben a böngésző kéri az engedélyt. Az emlékeztetők időpontja a tételnél állítható.</span></div></div></div></div>}
   </>;

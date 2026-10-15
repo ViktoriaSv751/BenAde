@@ -1,25 +1,27 @@
 import Link from "next/link";
-import { Wordmark } from "./Brand";
 
-export default function AuthShell({ title, lead, children, footer, claim }: { title: string; lead: string; children: React.ReactNode; footer?: React.ReactNode; claim?: { h: string; p: string } }) {
-  const c = claim || { h: "Egyetlen határidő sem csúszik el többé.", p: "Fedélzeti egység és vezetői kártya letöltések, oktatások, számlák – automatikus ciklusokkal, időben érkező emlékeztetőkkel." };
+/** Belépés / regisztráció – mindig sötét, teljes képes megjelenés. */
+export default function AuthShell({ title, lead, children, footer }: { title: string; lead: string; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <div className="auth-page">
-      <aside className="auth-side" aria-hidden>
-        <img src="/img/truck.jpg" alt="" />
-        <Wordmark />
-        <div className="claim"><h2>{c.h}</h2><p>{c.p}</p></div>
-      </aside>
-      <div className="auth-hero">
-        <img src="/img/truck.jpg" alt="" fetchPriority="high" />
-        <Wordmark />
+      <div className="auth-bg" aria-hidden>
+        <picture>
+          <source media="(min-width: 900px)" srcSet="/img/road.jpg" />
+          <img src="/img/truck.jpg" alt="" fetchPriority="high" />
+        </picture>
       </div>
-      <main className="auth-body">
-        <div><h1>{title}</h1><p className="lead">{lead}</p></div>
-        {children}
-        {footer}
-        <p className="auth-legal">A folytatással elfogadja a <Link href="/terms">felhasználási feltételeket</Link> és az <Link href="/privacy">adatkezelési tájékoztatót</Link>.</p>
-      </main>
+      <div className="auth-wrap">
+        <header className="auth-mark">
+          <Link href="/login" className="wm" aria-label="BenAde">Ben<b>Ade</b></Link>
+          <p className="claim">Minden tachográf-határidő.<br />Pontosan időben.</p>
+        </header>
+        <main className="auth-card">
+          <div className="auth-head"><h1>{title}</h1><p className="lead">{lead}</p></div>
+          {children}
+          {footer}
+          <p className="auth-legal">A folytatással elfogadja a <Link href="/terms">felhasználási feltételeket</Link> és az <Link href="/privacy">adatkezelési tájékoztatót</Link>.</p>
+        </main>
+      </div>
     </div>
   );
 }

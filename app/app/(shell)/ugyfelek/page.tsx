@@ -1,4 +1,2 @@
-import type { Metadata } from "next";
-import { CustomersView } from "@/components/app/Customers";
-export const metadata: Metadata = { title: "Ügyfelek" };
-export default function Page() { return <CustomersView />; }
+import { redirect } from "next/navigation";
+export default function Page() { redirect("/app/adatbank"); }

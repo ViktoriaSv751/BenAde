@@ -14,7 +14,7 @@ export function TaskDetailPanel({ id, onClose }: { id: string | null; onClose: (
   const data = useData(); const { layout, demo } = useShell(); const path = usePathname();
   const t = id ? data?.tasks.find(x => x.id === id) : undefined;
   const base = demo ? "/demo" : "/app";
-  const inlinePages = [base, `${base}/naptar`, `${base}/szamlak`];
+  const inlinePages = [base, `${base}/naptar`, `${base}/szamlak`, `${base}/emlekeztetok`];
   // tablet/desktop pages with an inline detail pane render the detail themselves
   if (!id || (layout !== "phone" && inlinePages.includes(path))) return null;
   return <Panel open={!!id} onClose={onClose} title={t ? TASK_META[t.type].short : "Tétel"} wide={layout !== "phone"}>{t ? <TaskDetail t={t} onDone={onClose} /> : <div className="empty"><h3>Ez a tétel már nem létezik.</h3></div>}</Panel>;

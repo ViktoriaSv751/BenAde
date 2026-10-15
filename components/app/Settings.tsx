@@ -15,7 +15,7 @@ export function SettingsView() {
   const base = demo ? "/demo" : "/app";
   const grid = layout === "desktop" ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" } : { display: "flex", flexDirection: "column" as const, gap: 16 };
   return <>
-    <TopBar title="Beállítások" back={layout === "phone" ? `${base}/tobb` : undefined} />
+    <TopBar title="Beállítások" back={layout === "phone" ? `${base}/profil` : undefined} />
     <div className="content">
       <div style={grid}>
         <section className="card pad"><Head icon={Icon.gear(18)} title="Vállalkozás adatai" sub="Megjelenik a PDF-eken és az e-mailekben" />
@@ -32,7 +32,7 @@ export function SettingsView() {
           <div className="srow"><div><div className="k">Billentyűk</div><div className="d">N – új rögzítés · / vagy ⌘K – keresés · Esc – bezárás</div></div></div>
         </section>
         <section className="card pad"><Head icon={Icon.calendar(18)} title="Naptár-előfizetés (ICS)" sub="Google/Apple/Outlook naptárba húzható élő feed" />
-          {demo ? <div className="info">{Icon.info()}<span>Bemutató módban nincs ICS feed. Regisztráció után a saját munkaterület kap egy titkos linket.</span></div>
+          {demo ? <div className="info">{Icon.info()}<span>A tesztfiókban nincs ICS feed. Saját fiókkal a munkaterület kap egy titkos linket.</span></div>
             : <><Copyable text={`${typeof location !== "undefined" ? location.origin : ""}/api/ics/${w.ics_token}`} /><p className="hint" style={{ marginTop: 8, fontSize: 12.5, color: "var(--muted)" }}>Apple Naptár: Fájl → Új naptár-előfizetés. Google: Egyéb naptárak → URL-ről. Aki ismeri a linket, látja a határidőket – szükség esetén új linket kérhet.</p>{canEdit && <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={async () => { if (await confirm({ title: "Új ICS link", text: "A régi link azonnal megszűnik; a már feliratkozott naptárakat újra kell kötni.", okLabel: "Új link" })) mutate(r => r.workspace.update({ ics_token: cryptoToken() }), { success: "Új link kész" }); }}>{Icon.refresh(14)} Új link</button>}</>}
         </section>
         <section className="card pad"><Head icon={Icon.dl(18)} title="Adatok" sub="Export, import, biztonsági mentés" />
@@ -41,9 +41,9 @@ export function SettingsView() {
             <button className="btn secondary sm" onClick={() => exportCsv(data)}>{Icon.dl(14)} Teendők (CSV)</button>
             <Link className="btn secondary sm" href={`${base}/import`}>{Icon.upload(14)} Excel import</Link>
           </div>
-          {demo && <div style={{ marginTop: 12 }}><button className="btn ghost sm" onClick={async () => { if (await confirm({ title: "Bemutató adatok visszaállítása", text: "A módosításai elvesznek, a példaadatok újratöltődnek.", okLabel: "Visszaállítás" })) { (repo as DemoRepo).reset(); location.reload(); } }}>{Icon.refresh(14)} Példaadatok visszaállítása</button></div>}
+          {demo && <div style={{ marginTop: 12 }}><button className="btn ghost sm" onClick={async () => { if (await confirm({ title: "Tesztadatok visszaállítása", text: "A módosításai elvesznek, a példaadatok újratöltődnek.", okLabel: "Visszaállítás" })) { (repo as DemoRepo).reset(); location.reload(); } }}>{Icon.refresh(14)} Példaadatok visszaállítása</button></div>}
         </section>
-        <section className="card pad" style={{ borderColor: "var(--danger-soft)" }}><Head icon={Icon.warn(18)} title="Veszélyzóna" />
+        <section className="card pad" id="fiok" style={{ borderColor: "var(--danger-soft)" }}><Head icon={Icon.warn(18)} title="Veszélyzóna" />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button className="btn ghost sm" onClick={signOut}>{Icon.logout(14)} Kijelentkezés</button>
             {!demo && <button className="btn danger sm" onClick={async () => { if (await confirm({ title: "Fiók törlése", text: "A fiókja és – ha Ön az egyedüli tulajdonos – a munkaterület minden adata végleg törlődik. Írja be: TÖRLÉS", okLabel: "Fiók törlése", danger: true, confirmWord: "TÖRLÉS" })) { const sb = createClient(); const { error } = await sb.rpc("delete_my_account"); if (error) { toast("Hiba: " + error.message, "err"); return; } await sb.auth.signOut(); location.href = "/"; } }}>{Icon.trash(14)} Fiók végleges törlése</button>}
@@ -89,16 +89,12 @@ function DefaultsForm({ disabled }: { disabled: boolean }) {
 }
 
 function AccountForm() {
-  const data = useData()!; const mutate = useMutate(); const toast = useToast(); const { demo } = useShell();
-  const [name, setName] = useState(data.profile.full_name || ""); const [pw, setPw] = useState(""); const [pw2, setPw2] = useState(""); const [busy, setBusy] = useState(false);
+  const data = useData()!; const mutate = useMutate(); const { demo } = useShell();
+  const [name, setName] = useState(data.profile.full_name || "");
   return <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
     <form onSubmit={async e => { e.preventDefault(); await mutate(r => r.profile.update({ full_name: name.trim() }), { success: "Név mentve" }); if (!demo) { await createClient().auth.updateUser({ data: { full_name: name.trim() } }); } }} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
       <div style={{ flex: 1 }}><Field label="Megjelenített név" id="a-n"><input className="ctl" id="a-n" value={name} onChange={e => setName(e.target.value)} /></Field></div><button className="btn secondary" type="submit">Mentés</button>
     </form>
-    {!demo && <form onSubmit={async e => { e.preventDefault(); if (pw.length < 8) { toast("Legalább 8 karakter.", "err"); return; } if (pw !== pw2) { toast("A két jelszó nem egyezik.", "err"); return; } setBusy(true); const { error } = await createClient().auth.updateUser({ password: pw }); setBusy(false); if (error) toast("Hiba: " + error.message, "err"); else { toast("Jelszó módosítva", "ok"); setPw(""); setPw2(""); } }} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div className="row2"><Field label="Új jelszó" id="a-p"><input className="ctl" id="a-p" type="password" autoComplete="new-password" value={pw} onChange={e => setPw(e.target.value)} /></Field><Field label="Még egyszer" id="a-p2"><input className="ctl" id="a-p2" type="password" autoComplete="new-password" value={pw2} onChange={e => setPw2(e.target.value)} /></Field></div>
-      <button className="btn secondary sm" type="submit" disabled={busy || !pw} style={{ alignSelf: "flex-start" }}>Jelszó módosítása</button>
-    </form>}
   </div>;
 }
 

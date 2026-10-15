@@ -16,7 +16,7 @@ export function TeamView() {
   const owner = role === "owner"; const base = demo ? "/demo" : "/app";
   const invite = async (e: React.FormEvent) => { e.preventDefault(); const em = email.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { toast("Érvénytelen e-mail cím.", "err"); return; } const inv = await mutate(rp => rp.workspace.invite(em, r), { success: "Meghívó létrehozva" }); setEmail(""); const link = `${location.origin}/meghivo/${inv.token}`; setLast(link); if (!demo) { try { await fetch("/api/invite", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: em, link, workspace: data.workspace.name }) }); } catch {} } };
   return <>
-    <TopBar title="Csapat" back={layout === "phone" ? `${base}/tobb` : undefined} sub={layout === "desktop" ? `${data.members.length} tag` : undefined} />
+    <TopBar title="Csapat" back={layout === "phone" ? `${base}/profil` : undefined} sub={layout === "desktop" ? `${data.members.length} tag` : undefined} />
     <div className="content">
       <div style={layout === "desktop" ? { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 16 }}>
         <section className="card" style={{ padding: "4px 16px" }}>

@@ -40,7 +40,7 @@ export function ImportWizard() {
   const run = async () => { setBusy(true); try { const clean = mapped.map(r => ({ ...r, company: titleCase(r.company), plate: r.plate ? plateFmt(r.plate) : undefined, driver: r.driver ? titleCase(r.driver) : undefined, lastVu: normDate(r.lastVu), lastCard: normDate(r.lastCard) })); const res = await mutate(rp => rp.importRows(clean), { success: "Import kész" }); setDone(res); } catch { /* toast shown */ } finally { setBusy(false); } };
 
   return <>
-    <TopBar title="Excel import" back={layout === "phone" ? `${base}/tobb` : undefined} />
+    <TopBar title="Excel import" back={layout === "phone" ? `${base}/profil` : undefined} />
     <div className="content" style={{ maxWidth: 980 }}>
       {!rows.length && <>
         <div className="card pad" style={{ textAlign: "center", padding: 36, borderStyle: "dashed", cursor: "pointer" }} onClick={() => file.current?.click()} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) onFile(f); }}>
@@ -64,13 +64,13 @@ export function ImportWizard() {
         <div className="card pad"><h3 style={{ fontSize: 14, marginBottom: 8 }}>Előnézet · {mapped.length} sor importálható{rows.length - mapped.length ? ` (${rows.length - mapped.length} sor cégnév nélkül kimarad)` : ""}</h3>
           <div style={{ overflow: "auto" }}><table className="table"><thead><tr>{FIELDS.filter(f => map.includes(f.k)).map(f => <th key={f.k}>{f.l}</th>)}</tr></thead><tbody>{mapped.slice(0, 8).map((r, i) => <tr key={i}>{FIELDS.filter(f => map.includes(f.k)).map(f => <td key={f.k} className={/plate|taxId|last|phone/.test(f.k) ? "mono" : ""}>{f.k === "company" ? titleCase(r.company) : f.k === "plate" ? plateFmt(r.plate || "") : f.k === "driver" ? titleCase(r.driver || "") : (f.k === "lastVu" || f.k === "lastCard") ? (normDate(r[f.k]) || <span style={{ color: "var(--danger-fg)" }}>{r[f.k] || "–"}</span>) : r[f.k]}</td>)}</tr>)}</tbody></table></div>
         </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}><Link className="btn ghost" href={`${base}/tobb`}>Mégse</Link><button className="btn primary" disabled={busy || !map.includes("company") || mapped.length === 0 || map.some(dup)} onClick={run}>{busy ? "Importálás…" : <>{Icon.upload(16)} {mapped.length} sor importálása</>}</button></div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}><Link className="btn ghost" href={`${base}/profil`}>Mégse</Link><button className="btn primary" disabled={busy || !map.includes("company") || mapped.length === 0 || map.some(dup)} onClick={run}>{busy ? "Importálás…" : <>{Icon.upload(16)} {mapped.length} sor importálása</>}</button></div>
       </>}
       {done && <div className="card pad" style={{ textAlign: "center", padding: 32 }}>
         <div className="avatar" style={{ width: 56, height: 56, borderRadius: 16, margin: "0 auto 12px", background: "var(--ok-soft)", color: "var(--ok-fg)" }}>{Icon.check(26)}</div>
         <h2 style={{ fontSize: 20 }}>Import kész</h2>
         <p style={{ color: "var(--muted)", marginTop: 6 }}>{done.companies} cég · {done.vehicles} jármű · {done.drivers} sofőr · {done.tasks} teendő létrehozva</p>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}><Link className="btn primary" href={`${base}/ugyfelek`}>Ügyfelek megtekintése</Link><button className="btn ghost" onClick={() => { setDone(null); setRows([]); }}>Újabb fájl</button></div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}><Link className="btn primary" href={`${base}/adatbank`}>Ügyfelek megtekintése</Link><button className="btn ghost" onClick={() => { setDone(null); setRows([]); }}>Újabb fájl</button></div>
       </div>}
     </div>
   </>;

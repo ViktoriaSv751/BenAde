@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wordmark } from "@/components/Brand";
 import { createClient } from "@/lib/supabase/client";
 import { Field, Icon } from "@/components/ui";
 import { titleCase, plateFmt, companyName } from "@/lib/format";
@@ -28,11 +27,12 @@ export function Onboarding({ email, name, inviteToken }: { email: string; name: 
   const finish = () => { router.replace("/app"); router.refresh(); };
   return (
     <div className="auth-page">
-      <aside className="auth-side" aria-hidden><img src="/img/truck.jpg" alt="" /><Wordmark href="/app" /><div className="claim"><h2>Három perc, és minden határidő a helyén.</h2><p>Munkaterület, első ügyfél, első rendszám – a többit a BenAde számolja.</p></div></aside>
-      <div className="auth-hero"><img src="/img/truck.jpg" alt="" /><Wordmark href="/app" /></div>
-      <main className="auth-body">
+      <div className="auth-bg" aria-hidden><picture><source media="(min-width: 900px)" srcSet="/img/road.jpg" /><img src="/img/truck.jpg" alt="" /></picture></div>
+      <div className="auth-wrap">
+      <header className="auth-mark"><a href="/app" className="wm" aria-label="BenAde">Ben<b>Ade</b></a><p className="claim">Három perc, és minden<br />határidő a helyén.</p></header>
+      <main className="auth-card">
         <div className="ob">
-          {step !== 9 && <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>{[0, 1, 2].map(i => <span key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? "var(--accent)" : "var(--surface-2)" }} />)}</div>}
+          {step !== 9 && <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>{[0, 1, 2].map(i => <span key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: i <= step ? "var(--accent)" : "rgba(255,255,255,.14)" }} />)}</div>}
           {step === 0 && <>
             <h1>Üdv, {name || email}!</h1><p className="lead">Először adjon nevet a munkaterületnek – általában ez a tachográf-szerviz neve. Később bármikor módosítható.</p>
             <form onSubmit={e => { e.preventDefault(); createWs(); }}>
@@ -52,9 +52,9 @@ export function Onboarding({ email, name, inviteToken }: { email: string; name: 
             </form>
           </>}
           {step === 2 && <>
-            <h1>Készen áll.</h1><p className="lead">A Ma képernyőn mindig a következő határidő van legfelül. Emlékeztetőt a határidő előtt 7, 1 és 0 nappal 08:00-kor küldünk – ezt a beállításokban finomhangolhatja.</p>
+            <h1>Készen áll.</h1><p className="lead">A Teendő képernyőn mindig a következő határidő van legfelül. Emlékeztetőt a határidő előtt 7, 1 és 0 nappal 08:00-kor küldünk – ezt a beállításokban finomhangolhatja.</p>
             <div style={{ display: "grid", gap: 10, margin: "18px 0" }}>
-              {[["Rögzítés 3 koppintással", "Nagy + gomb → típus → cég és rendszám. A határidő automatikus."], ["Letöltés lezárása", "Pipa a tételen → azonnal létrejön a következő ciklus."], ["Excel import", "Több → Excel import: cégek, rendszámok, sofőrök egyben."]].map(([t, s]) => <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}><span style={{ color: "#FFB224", marginTop: 2 }}>{Icon.check(18)}</span><div><b style={{ color: "#fff" }}>{t}</b><div style={{ color: "#9AA5BC", fontSize: 13.5 }}>{s}</div></div></div>)}
+              {[["Rögzítés 3 koppintással", "Nagy + gomb → típus → cég és rendszám. A határidő automatikus."], ["Letöltés lezárása", "Pipa a tételen → azonnal létrejön a következő ciklus."], ["Excel import", "Profil → Excel import: cégek, rendszámok, sofőrök egyben."]].map(([t, s]) => <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}><span style={{ color: "#FFB224", marginTop: 2 }}>{Icon.check(18)}</span><div><b style={{ color: "#fff" }}>{t}</b><div style={{ color: "#9AA5BC", fontSize: 13.5 }}>{s}</div></div></div>)}
             </div>
             <button className="btn primary block" onClick={finish}>Irány az alkalmazás {Icon.chev(16)}</button>
           </>}
@@ -66,6 +66,7 @@ export function Onboarding({ email, name, inviteToken }: { email: string; name: 
         </div>
         <p className="auth-legal">Bejelentkezve: {email} · <a href="/auth/signout">Kijelentkezés</a></p>
       </main>
+      </div>
     </div>
   );
 }

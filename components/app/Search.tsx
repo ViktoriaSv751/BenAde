@@ -20,7 +20,7 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
   return createPortal(
     <div className="palette" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="box" role="dialog" aria-modal="true" aria-label="Keresés">
-        <input ref={ref} value={q} onChange={e => setQ(e.target.value)} placeholder="Rendszám, cég, sofőr, számlaszám…" onKeyDown={e => { if (e.key === "Escape") onClose(); if (e.key === "ArrowDown") { e.preventDefault(); setI(x => Math.min(flat.length - 1, x + 1)); } if (e.key === "ArrowUp") { e.preventDefault(); setI(x => Math.max(0, x - 1)); } if (e.key === "Enter" && flat[i]) go(flat[i]); }} />
+        <div className="qrow"><input ref={ref} value={q} onChange={e => setQ(e.target.value)} placeholder="Rendszám, cég, sofőr, számlaszám…" onKeyDown={e => { if (e.key === "Escape") onClose(); if (e.key === "ArrowDown") { e.preventDefault(); setI(x => Math.min(flat.length - 1, x + 1)); } if (e.key === "ArrowUp") { e.preventDefault(); setI(x => Math.max(0, x - 1)); } if (e.key === "Enter" && flat[i]) go(flat[i]); }} /><button type="button" className="cancel" onClick={onClose}>Mégse</button></div>
         <div className="res">
           {q.trim().length < 2 ? <div className="grp" style={{ padding: 16 }}>Írjon be legalább 2 karaktert. Tipp: a rendszám kötőjel nélkül is találat.</div>
             : flat.length === 0 ? <div className="grp" style={{ padding: 16 }}>Nincs találat erre: „{q}”.</div>

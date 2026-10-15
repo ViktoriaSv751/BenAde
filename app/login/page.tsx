@@ -3,47 +3,43 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthShell from "@/components/AuthShell";
-import PasswordInput from "@/components/PasswordInput";
 import SocialAuth from "@/components/SocialAuth";
 import { createClient } from "@/lib/supabase/client";
 import { authMessage } from "@/lib/auth-errors";
 
-function LoginForm() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const [err, setErr] = useState<string | null>(params.get("error") === "link" ? "A hivatkozás lejárt vagy érvénytelen. Jelentkezzen be, vagy kérjen újat." : null);
-  const [busy, setBusy] = useState(false);
-  const next = params.get("next") || "/app";
-
+/** Rejtett tartalék: /login?mod=email – csak a régi, e-mailes fiókoknak (nem jelenik meg a felületen). */
+function EmailFallback({ next }: { next: string }) {
+  const router = useRouter(); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setErr(null); setBusy(true);
     const fd = new FormData(e.currentTarget);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email: String(fd.get("email")).trim(), password: String(fd.get("password")) });
+    const { error } = await createClient().auth.signInWithPassword({ email: String(fd.get("email")).trim(), password: String(fd.get("password")) });
     setBusy(false);
     if (error) { setErr(authMessage(error.message)); return; }
     router.replace(next.startsWith("/") ? next : "/app"); router.refresh();
   }
-
   return (
-    <>
-      <SocialAuth next={next} onError={setErr} />
-      <div className="or">vagy e-maillel</div>
-      <form onSubmit={onSubmit} noValidate>
-        <div className="field"><label htmlFor="email">E-mail-cím</label><input className="ctl" id="email" name="email" type="email" autoComplete="email" inputMode="email" placeholder="nev@ceg.hu" required /></div>
-        <div className="field"><label htmlFor="password">Jelszó</label><PasswordInput id="password" autoComplete="current-password" placeholder="••••••••" required /></div>
-        {err && <div className="ferr" role="alert">{err}</div>}
-        <button className="btn primary block" type="submit" disabled={busy}>{busy ? "Bejelentkezés…" : "Bejelentkezés"}</button>
-      </form>
-      <div className="auth-links"><Link href="/forgot">Elfelejtett jelszó</Link><span>Új itt? <Link href="/register">Fiók létrehozása</Link></span></div>
-    </>
+    <form onSubmit={onSubmit} noValidate>
+      <input className="ctl" name="email" type="email" autoComplete="email" placeholder="E-mail-cím" aria-label="E-mail-cím" required />
+      <input className="ctl" name="password" type="password" autoComplete="current-password" placeholder="Jelszó" aria-label="Jelszó" required />
+      {err && <div className="ferr" role="alert">{err}</div>}
+      <button className="btn primary block" type="submit" disabled={busy}>{busy ? "Belépés…" : "Belépés"}</button>
+    </form>
+  );
+}
+
+function Login() {
+  const params = useSearchParams();
+  const next = params.get("next") || "/app";
+  const linkErr = params.get("error") === "link";
+  return (
+    <AuthShell title="Üdv újra" lead="Lépjen be, és nézze meg, mi esedékes ma." footer={<div className="auth-links"><span>Még nincs fiókja?</span><Link href="/register">Fiók létrehozása</Link></div>}>
+      {linkErr && <div className="ferr" role="alert">A belépés nem sikerült vagy a hivatkozás lejárt. Próbálja újra.</div>}
+      {params.get("mod") === "email" ? <EmailFallback next={next} /> : <SocialAuth next={next} />}
+    </AuthShell>
   );
 }
 
 export default function LoginPage() {
-  return (
-    <AuthShell title="Bejelentkezés" lead="Folytassa ott, ahol abbahagyta.">
-      <Suspense fallback={null}><LoginForm /></Suspense>
-    </AuthShell>
-  );
+  return <Suspense fallback={null}><Login /></Suspense>;
 }

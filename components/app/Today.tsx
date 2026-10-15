@@ -30,7 +30,7 @@ export function TodayView() {
   const base = demo ? "/demo" : "/app";
   const complete = (x: Task) => mutate(r => r.task.complete(x.id), { optimistic: s => { const y = s.tasks.find(z => z.id === x.id); if (y) y.status = "done"; return s; } }).then(() => toast("Elvégezve", "ok", { label: "Visszavonás", fn: () => mutate(r => r.task.reopen(x.id)) }));
 
-  if (!data) return <><TopBar title="Ma" /><div className="content"><Skeleton n={4} h={72} /></div></>;
+  if (!data) return <><TopBar title="Teendő" /><div className="content"><Skeleton n={4} h={72} /></div></>;
   const onboarding = data.companies.length === 0 && data.tasks.length === 0;
 
   const listPane = (
@@ -65,7 +65,7 @@ export function TodayView() {
   );
   const detail = sel ? data.tasks.find(x => x.id === sel) : undefined;
   return <>
-    <TopBar title={layout === "desktop" ? `${greet()}, ${data.profile.full_name?.split(" ")[0] || ""}` : "Ma"} sub={layout === "desktop" ? fmtLong(new Date()) : undefined} actions={layout !== "phone" ? <button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Új</button> : undefined} />
+    <TopBar title={layout === "desktop" ? `${greet()}, ${data.profile.full_name?.split(" ")[0] || ""}` : "Teendő"} sub={layout === "desktop" ? fmtLong(new Date()) : undefined} actions={layout !== "phone" ? <button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Új</button> : undefined} />
     {layout === "phone" ? listPane : (
       <div className="split">
         <div className="pane">{listPane}</div>

@@ -26,5 +26,5 @@ export function DemoRoot({ children }: { children: React.ReactNode }) {
   useEffect(() => { setRepo(new DemoRepo()); }, []);
   const signOut = useCallback(() => router.push("/"), [router]);
   if (!repo) return <div className="shell" data-layout="phone" style={{ minHeight: "100dvh" }} />;
-  return <ThemeProvider><ToastProvider><DataProvider repo={repo}><Shell email="bemutato@benade.hu" name="Bemutató" demo signOut={signOut}>{children}</Shell></DataProvider></ToastProvider></ThemeProvider>;
+  return <ThemeProvider><ToastProvider><DataProvider repo={repo}><Shell email="teszt@benade.hu" name="Tesztfiók" demo signOut={signOut}>{children}</Shell></DataProvider></ToastProvider></ThemeProvider>;
 }

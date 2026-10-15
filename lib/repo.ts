@@ -133,7 +133,7 @@ export class SupabaseRepo implements Repo {
 }
 
 /* ---------------- Demo (local) ---------------- */
-const LS = "benade.demo.v2";
+const LS = "benade.demo.v3";
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
 const nowIso = () => new Date().toISOString();
 
@@ -263,58 +263,67 @@ async function importGeneric(repo: Repo, rows: ImportRow[]) {
   return n;
 }
 
-/* ---------------- demo seed ---------------- */
+/* ---------------- demo seed (tesztfiók: ~3 hónapnyi, valósághű adat) ---------------- */
 export function demoSeed(): Snapshot {
   const wsId = "demo-ws"; const t = todayISO(); const now = nowIso();
+  let seed = 4242; const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const ri = (a: number, b: number) => a + Math.floor(rnd() * (b - a + 1)); const pick = <T,>(arr: T[]) => arr[Math.floor(rnd() * arr.length)];
   const defaults: WorkspaceDefaults = { vuDays: 90, cardDays: 28, calibrationDays: 730, cardExpiryDays: 1825, invoiceDays: 30, remindDaysBefore: [7, 1, 0], remindTime: "08:00", trainingTimes: ["-1T16:00", "0T06:00"], quietFrom: "21:00", quietTo: "06:00", vatPercent: 27 };
-  const workspace: Workspace = { id: wsId, name: "BenAde Tachográf Szerviz", phone: "+36 30 555 1234", email: "info@benade.hu", address: "Budapest, Fő utca 1.", tax_id: "12345678-2-42", timezone: "Europe/Budapest", defaults, ics_token: "demo", created_at: now };
-  const mk = <T,>(o: T) => o;
-  const cos: Company[] = [
-    mk({ id: "c1", workspace_id: wsId, name: "Példa Kft.", tax_id: "12345678-2-42", address: "Budapest, Fő utca 1.", phone: "+36 1 234 5678", tags: ["kiemelt"], created_at: now, updated_at: now }),
-    mk({ id: "c2", workspace_id: wsId, name: "Szállítmányozás Zrt.", tax_id: "87654321-2-41", address: "Győr, Ipari park 12.", phone: "+36 96 555 123", tags: [], created_at: now, updated_at: now }),
-    mk({ id: "c3", workspace_id: wsId, name: "Logisztika 2000 Kft.", tax_id: "11223344-2-13", address: "Debrecen, Vágóhíd u. 8.", phone: "+36 52 444 222", tags: [], created_at: now, updated_at: now }),
-    mk({ id: "c4", workspace_id: wsId, name: "Transz-Profi Bt.", tax_id: "99887766-1-05", address: "Kecskemét, Kuruc krt. 3.", phone: "+36 76 333 111", tags: ["problémás fizető"], created_at: now, updated_at: now }),
-  ] as Company[];
-  const contacts: Contact[] = [
-    { id: "k1", workspace_id: wsId, company_id: "c1", name: "Kovács Anna", phone: "+36 30 123 4567", email: "anna@pelda.hu", role: "flottavezető", is_primary: true, created_at: now },
-    { id: "k2", workspace_id: wsId, company_id: "c2", name: "Nagy Béla", phone: "+36 20 987 6543", role: "diszpécser", is_primary: true, created_at: now },
+  const workspace: Workspace = { id: wsId, name: "Sóti Tachográf Szerviz", phone: "+36 30 555 1234", email: "info@sotitacho.hu", address: "Budapest, Fő utca 1.", tax_id: "12345678-2-42", timezone: "Europe/Budapest", defaults, ics_token: "demo", created_at: now };
+  const C: [string, string, string, string, string, string][] = [
+    ["Horváth Trans Kft.", "12345678-2-13", "2600 Vác, Ipari park 4.", "Horváth Zoltán", "+36 30 211 4567", "kiemelt"],
+    ["Duna Logisztika Zrt.", "23456789-2-41", "1239 Budapest, Grassalkovich út 112.", "Kiss Andrea", "+36 20 345 7788", ""],
+    ["Alföld Fuvar Bt.", "34567890-1-03", "6000 Kecskemét, Halasi út 22.", "Szabó Gábor", "+36 70 556 1212", ""],
+    ["Pannon Spedit Kft.", "45678901-2-18", "8200 Veszprém, Házgyári út 7.", "Tóth Mária", "+36 30 777 9901", "problémás fizető"],
+    ["Kovács és Fia Szállítás", "56789012-1-15", "3300 Eger, Kistályai út 18.", "Kovács István", "+36 20 998 2233", ""],
+    ["Tisza Cargo Kft.", "67890123-2-16", "6726 Szeged, Fő fasor 101.", "Nagy Péter", "+36 30 123 8899", "kiemelt"],
+    ["Balaton Busz Kft.", "78901234-2-14", "8600 Siófok, Vak Bottyán u. 9.", "Varga Eszter", "+36 70 334 5566", ""],
+    ["Mátra Transz Kft.", "89012345-2-10", "3200 Gyöngyös, Pesti út 65.", "Molnár Attila", "+36 20 445 6677", ""],
+    ["Rába Fuvarozó Zrt.", "90123456-2-08", "9027 Győr, Budai út 3.", "Farkas Judit", "+36 30 889 0011", ""],
+    ["Sárköz Agrár Kft.", "01234567-2-17", "7100 Szekszárd, Keselyűsi út 14.", "Papp László", "+36 70 222 3344", ""],
+    ["Zemplén Expressz Bt.", "11223344-1-05", "3900 Szerencs, Rákóczi út 80.", "Lakatos Tibor", "+36 20 667 7788", ""],
+    ["Fehérvár Food Logistic Kft.", "22334455-2-07", "8000 Székesfehérvár, Seregélyesi út 96.", "Balogh Nóra", "+36 30 456 7890", ""],
   ];
-  const veh = (id: string, c: string, plate: string, make: string, vu = "Smart tachográf G2") => ({ id, workspace_id: wsId, company_id: c, plate, make, vu_type: vu, created_at: now, updated_at: now }) as Vehicle;
-  const vehicles: Vehicle[] = [veh("v1", "c1", "ABC-123", "Volvo FH"), veh("v2", "c1", "DEF-456", "Scania R"), veh("v3", "c2", "GHI-789", "MAN TGX"), veh("v4", "c2", "JKL-012", "DAF XF"), veh("v5", "c2", "AA BB-123", "Mercedes Actros"), veh("v6", "c3", "MNO-345", "Iveco S-Way", "Digitális tachográf"), veh("v7", "c4", "PQR-678", "Renault T")];
-  const drv = (id: string, c: string, name: string) => ({ id, workspace_id: wsId, company_id: c, name, card_number: "HU" + Math.floor(100000000 + Math.random() * 899999999), created_at: now, updated_at: now }) as Driver;
-  const drivers: Driver[] = [drv("d1", "c1", "Példa Péter"), drv("d2", "c1", "Kovács János"), drv("d3", "c2", "Nagy Sándor"), drv("d4", "c2", "Tóth István"), drv("d5", "c3", "Szabó László"), drv("d6", "c4", "Horváth Gábor")];
-  const schedules: Schedule[] = []; const tasks: Task[] = [];
-  const addCycle = (type: TaskType, c: string, v: string | null, d: string | null, base: string, note?: string) => {
-    const s: Schedule = { id: "s" + schedules.length, workspace_id: wsId, type, vehicle_id: v, driver_id: d, cycle_days: defaults[TASK_META[type].cycleKey!] as number, active: true, created_at: now }; schedules.push(s);
-    const due = computeDue(type, base, defaults);
-    tasks.push({ id: "t" + tasks.length, workspace_id: wsId, company_id: c, type, vehicle_id: v, driver_id: d, schedule_id: s.id, base_date: base, due_at: toTS(due, "08:00"), all_day: false, remind_at: reminderTimes(due, [7, 1, 0], "08:00"), status: "open", note: note || null, created_at: now, updated_at: now });
-    // history: one done cycle before
-    const prevBase = addDays(base, -(s.cycle_days)); tasks.push({ id: "t" + tasks.length, workspace_id: wsId, company_id: c, type, vehicle_id: v, driver_id: d, schedule_id: s.id, base_date: prevBase, due_at: toTS(base, "08:00"), all_day: false, remind_at: [], status: "done", done_at: toTS(base, "10:30"), created_at: now, updated_at: now });
-  };
-  addCycle("vu_download", "c1", "v1", null, addDays(t, -92), "Telephelyen letölteni");
-  addCycle("vu_download", "c1", "v2", null, addDays(t, -85));
-  addCycle("vu_download", "c2", "v3", null, addDays(t, -90));
-  addCycle("vu_download", "c2", "v4", null, addDays(t, -60));
-  addCycle("vu_download", "c2", "v5", null, addDays(t, -30));
-  addCycle("vu_download", "c3", "v6", null, addDays(t, -75));
-  addCycle("vu_download", "c4", "v7", null, addDays(t, -40));
-  addCycle("card_download", "c1", null, "d1", addDays(t, -27));
-  addCycle("card_download", "c1", null, "d2", addDays(t, -20));
-  addCycle("card_download", "c2", null, "d3", addDays(t, -31));
-  addCycle("card_download", "c2", null, "d4", addDays(t, -10));
-  addCycle("card_download", "c3", null, "d5", addDays(t, -14));
-  addCycle("card_download", "c4", null, "d6", addDays(t, -5));
-  addCycle("calibration", "c1", "v1", null, addDays(t, -700));
-  addCycle("card_expiry", "c2", null, "d3", addDays(t, -1800));
-  const tr = addDays(t, 11);
-  tasks.push({ id: "tr1", workspace_id: wsId, company_id: "c1", type: "training", vehicle_id: null, driver_id: null, due_at: toTS(tr, "10:00"), all_day: false, remind_at: defaultReminders(tr, defaults, "training"), status: "open", address: "Budapest, Fő utca 1.", contact_name: "Kovács Anna", contact_phone: "+36 30 123 4567", participants: 8, topic: "Vezetési és pihenőidő szabályok", note: "Parkolás a hátsó udvarban.", created_at: now, updated_at: now });
-  const inv = (id: string, c: string, no: string, issue: string, gross: number, paid?: string) => tasks.push({ id, workspace_id: wsId, company_id: c, type: "invoice", vehicle_id: null, driver_id: null, issue_date: issue, due_at: toTS(addDays(issue, 30), "08:00"), all_day: true, remind_at: reminderTimes(addDays(issue, 30), [0], "08:00"), status: paid ? "done" : "open", done_at: paid ? toTS(paid, "12:00") : null, invoice_no: no, net_amount: Math.round(gross / 1.27), vat_percent: 27, gross_amount: gross, paid_at: paid || null, created_at: now, updated_at: now });
-  inv("i1", "c1", "2026/001", addDays(t, -32), 35700);
-  inv("i2", "c4", "2026/002", addDays(t, -45), 128000);
-  inv("i3", "c2", "2026/003", addDays(t, -12), 64500);
-  inv("i4", "c3", "2026/004", addDays(t, -50), 42000, addDays(t, -20));
-  inv("i5", "c1", "2025/118", addDays(t, -80), 35700, addDays(t, -52));
-  const snap: Snapshot = { workspace, role: "owner", profile: { user_id: "demo", full_name: "Demó Felhasználó", theme: "system", notif_prefs: { push: true, email: true, sms: false, weeklyDigest: true, dailyDigest: true } }, companies: cos, contacts, vehicles, drivers, schedules, tasks, notifications: [], members: [{ workspace_id: wsId, user_id: "demo", role: "owner", created_at: now, email: "demo@benade.hu", full_name: "Demó Felhasználó" }], invites: [] };
+  const PL = ["KLM-204", "RTB-118", "HGF-771", "NJD-305", "PXA-942", "AA CD-114", "LKJ-558", "VBN-023", "AA FG-631", "TRW-410", "QSE-287", "AB CD-901", "MNB-662", "ZXC-349", "AA HJ-227", "PLK-806", "FDS-133", "AA KL-470", "GHT-595", "BNM-718", "AA MN-052", "JKL-364", "YUI-889", "AA PR-143", "CVB-511", "AA ST-608", "WER-276", "AA UV-390", "TYU-845", "OIP-137", "AA WX-724", "ASD-962", "AA YZ-281", "DFG-405", "AA BC-559", "HJK-093", "AA DE-816", "LZX-347", "AA FH-672", "CXZ-120"];
+  const MK = ["Mercedes-Benz Actros", "MAN TGX", "Scania R450", "Volvo FH", "DAF XF", "Iveco S-Way", "Renault T", "Mercedes-Benz Atego", "MAN TGS", "Scania S500"];
+  const DN = ["Kovács Béla", "Nagy Zoltán", "Szabó Ferenc", "Tóth Gábor", "Horváth János", "Varga Sándor", "Kiss László", "Molnár Péter", "Németh Attila", "Farkas Tamás", "Balogh Zsolt", "Papp Csaba", "Lakatos Gábor", "Juhász István", "Takács Norbert", "Mészáros Ádám", "Oláh Tibor", "Simon Krisztián", "Rácz Dániel", "Fekete Márton", "Szilágyi Imre", "Török Levente", "Fehér Balázs", "Balázs Róbert", "Gál Ákos", "Kis Bence", "Szűcs Viktor", "Kocsis Gergő", "Pintér Miklós", "Fodor Zoltán"];
+  const TOP = ["Vezetési és pihenőidő szabályok (561/2006/EK)", "Digitális tachográf kezelése – kézi bejegyzés", "Okos tachográf 2. generáció – újdonságok", "Rakományrögzítés és ellenőrzés", "Éves szabályzati frissítés"];
+  const NOTES = ["Telephelyen, reggel 7 előtt", "Sofőr hozza a szervizbe", "Szervizben lesz a jármű", null, null, null, null];
+  const cos: Company[] = [], contacts: Contact[] = [], vehicles: Vehicle[] = [], drivers: Driver[] = [], schedules: Schedule[] = [], tasks: Task[] = [];
+  let pi = 0, di = 0, n = 0; const id = (p: string) => `${p}${++n}`;
+  const task = (o: Partial<Task> & Pick<Task, "company_id" | "type" | "due_at">): Task => ({ id: id("t"), workspace_id: wsId, vehicle_id: null, driver_id: null, all_day: false, remind_at: [], status: "open", created_at: now, updated_at: now, ...o });
+  C.forEach(([name, tax, addr, contact, phone, tag], i) => {
+    const cid = `c${i + 1}`; const created = toTS(addDays(t, -(95 - i * 2)), "09:00");
+    cos.push({ id: cid, workspace_id: wsId, name, tax_id: tax, address: addr, phone, email: `info@${name.split(" ")[0].toLowerCase().normalize("NFD").replace(/[^a-z]/g, "")}.hu`, tags: tag ? [tag] : [], created_at: created, updated_at: created });
+    contacts.push({ id: id("k"), workspace_id: wsId, company_id: cid, name: contact, phone, role: "ügyvezető", is_primary: true, created_at: created });
+    for (let j = 0, nv = ri(2, 5); j < nv && pi < PL.length; j++) {
+      const vid = id("v"); vehicles.push({ id: vid, workspace_id: wsId, company_id: cid, plate: PL[pi++], make: pick(MK), vu_type: pick(["Smart tachográf G2", "Smart tachográf G1", "Digitális tachográf"]), created_at: created, updated_at: created });
+      const sid = id("s"); schedules.push({ id: sid, workspace_id: wsId, type: "vu_download", vehicle_id: vid, driver_id: null, cycle_days: 90, active: true, created_at: created });
+      const base = addDays(t, -ri(0, 92)), due = addDays(base, 90);
+      tasks.push(task({ company_id: cid, type: "vu_download", vehicle_id: vid, schedule_id: sid, base_date: addDays(base, -90), due_at: toTS(base, "08:00"), status: "done", done_at: toTS(base, `${ri(8, 15)}:${String(ri(0, 59)).padStart(2, "0")}`) }));
+      tasks.push(task({ company_id: cid, type: "vu_download", vehicle_id: vid, schedule_id: sid, base_date: base, due_at: toTS(due, "08:00"), remind_at: reminderTimes(due, [7, 1, 0], "08:00"), note: pick(NOTES) }));
+      if (rnd() < .3) { const sc = id("s"); schedules.push({ id: sc, workspace_id: wsId, type: "calibration", vehicle_id: vid, driver_id: null, cycle_days: 730, active: true, created_at: created }); const dd = addDays(t, ri(20, 400)); tasks.push(task({ company_id: cid, type: "calibration", vehicle_id: vid, schedule_id: sc, base_date: addDays(dd, -730), due_at: toTS(dd, "09:00"), remind_at: reminderTimes(dd, [14, 1], "08:00") })); }
+    }
+    for (let j = 0, nd = ri(1, 4); j < nd && di < DN.length; j++) {
+      const did = id("d"); drivers.push({ id: did, workspace_id: wsId, company_id: cid, name: DN[di++], card_number: `HUN${String(ri(100000000, 999999999)).padStart(12, "0")}0${String(di).padStart(2, "0")}`, phone: `+36 ${pick(["20", "30", "70"])} ${ri(100, 999)} ${String(ri(0, 9999)).padStart(4, "0")}`, created_at: created, updated_at: created });
+      const sid = id("s"); schedules.push({ id: sid, workspace_id: wsId, type: "card_download", vehicle_id: null, driver_id: did, cycle_days: 28, active: true, created_at: created });
+      let base = addDays(t, -ri(84, 90));
+      for (let k = 0; k < 3; k++) { const due = addDays(base, 28); tasks.push(task({ company_id: cid, type: "card_download", driver_id: did, schedule_id: sid, base_date: base, due_at: toTS(due, "08:00"), status: "done", done_at: toTS(addDays(due, -ri(0, 2)), `${ri(8, 16)}:${String(ri(0, 59)).padStart(2, "0")}`) })); base = addDays(due, -ri(0, 2)); }
+      const due = addDays(base, 28); tasks.push(task({ company_id: cid, type: "card_download", driver_id: did, schedule_id: sid, base_date: base, due_at: toTS(due, "08:00"), remind_at: reminderTimes(due, [7, 1, 0], "08:00") }));
+      if (rnd() < .25) { const dd = addDays(t, ri(10, 300)); tasks.push(task({ company_id: cid, type: "card_expiry", driver_id: did, base_date: addDays(dd, -1825), due_at: toTS(dd, "00:00"), all_day: true, remind_at: reminderTimes(dd, [30, 7], "08:00") })); }
+    }
+    if ([0, 2, 5, 8, 11].includes(i)) { const dd = addDays(t, -ri(10, 80)); tasks.push(task({ company_id: cid, type: "training", due_at: toTS(dd, "10:00"), status: "done", done_at: toTS(dd, "12:30"), address: addr, contact_name: contact, contact_phone: phone, participants: ri(4, 15), topic: pick(TOP) })); }
+    if ([1, 3, 6, 9].includes(i)) { const dd = addDays(t, ri(3, 40)); tasks.push(task({ company_id: cid, type: "training", due_at: toTS(dd, i === 3 ? "09:00" : "10:00"), remind_at: defaultReminders(dd, defaults, "training"), address: addr, contact_name: contact, contact_phone: phone, participants: ri(5, 14), topic: pick(TOP), note: i === 6 ? "Parkolás a hátsó udvarban. Projektor van, laptop kell." : null })); }
+    for (let k = 0, ni = ri(1, 3); k < ni; k++) {
+      let issue = addDays(t, -ri(5, 89)), gross = pick([18500, 24900, 35700, 42000, 58900, 67500, 89000, 124000, 156000, 228000]);
+      let due = addDays(issue, 30); let paid: string | null = due < addDays(t, -3) && (rnd() < .8 || due < addDays(t, -20)) ? addDays(due, -ri(0, 19)) : null;
+      if (i === 3 && k === 0) { due = addDays(t, -23); issue = addDays(due, -30); gross = 128000; paid = null; }
+      if (i === 0 && k === 0) { due = t; issue = addDays(t, -30); paid = null; }
+      if (i === 5 && k === 0) { due = addDays(t, 2); issue = addDays(t, -28); paid = null; }
+      tasks.push(task({ company_id: cid, type: "invoice", issue_date: issue, base_date: issue, due_at: toTS(due, "00:00"), all_day: true, remind_at: paid ? [] : reminderTimes(due, [0], "08:00"), status: paid ? "done" : "open", done_at: paid ? toTS(paid, "09:00") : null, invoice_no: `2026/${String(100 + ((i * 7 + k * 3) % 80)).padStart(3, "0")}`, net_amount: Math.round(gross / 1.27), vat_percent: 27, gross_amount: gross, paid_at: paid }));
+    }
+  });
+  const snap: Snapshot = { workspace, role: "owner", profile: { user_id: "demo", full_name: "Tesztfiók", theme: "system", notif_prefs: { push: true, email: true, sms: false, weeklyDigest: true, dailyDigest: true } }, companies: cos, contacts, vehicles, drivers, schedules, tasks, notifications: [], members: [{ workspace_id: wsId, user_id: "demo", role: "owner", created_at: now, email: "teszt@benade.hu", full_name: "Tesztfiók" }], invites: [] };
   snap.notifications = tasks.filter(x => x.status === "open").flatMap(x => x.remind_at.filter(r => new Date(r).getTime() <= Date.now()).map(r => ({ id: uid(), workspace_id: wsId, task_id: x.id, channel: "inapp" as const, scheduled_at: r, status: "sent", title: TASK_META[x.type].name, body: taskSubject(snap, x), created_at: now })));
   return snap;
 }

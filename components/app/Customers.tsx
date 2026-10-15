@@ -14,8 +14,9 @@ import { CompanyForm, DriverForm, VehicleForm } from "./Capture";
 
 type Sort = "name" | "due" | "money";
 
-export function CustomersView({ selectedId }: { selectedId?: string }) {
-  const data = useData(); const { layout, openCapture, demo } = useShell(); const router = useRouter();
+/** Cégek listája (Adatbank → Cégek). */
+export function CompanyList({ selectedId }: { selectedId?: string }) {
+  const data = useData(); const { openCapture, demo, layout } = useShell(); const router = useRouter();
   const [q, setQ] = useState(""); const [sort, setSort] = useState<Sort>("due"); const [arch, setArch] = useState(false);
   const base = demo ? "/demo" : "/app";
   const rows = useMemo(() => {
@@ -28,24 +29,23 @@ export function CustomersView({ selectedId }: { selectedId?: string }) {
       return { c, next, overdue, money, vehicles: data.vehicles.filter(v => v.company_id === c.id && !v.archived_at).length, drivers: data.drivers.filter(d => d.company_id === c.id && !d.archived_at).length };
     }).sort((a, b) => sort === "name" ? a.c.name.localeCompare(b.c.name, "hu") : sort === "money" ? b.money - a.money : (a.next || "9").localeCompare(b.next || "9"));
   }, [data, q, sort, arch]);
-  if (!data) return <><TopBar title="Ügyfelek" /><div className="content"><Skeleton n={5} /></div></>;
-  const list = (
-    <div className="content">
-      <div style={{ position: "relative" }}><input className="ctl" style={{ paddingLeft: 42, borderRadius: 999 }} placeholder="Keresés név vagy adószám szerint…" value={q} onChange={e => setQ(e.target.value)} /><span style={{ position: "absolute", left: 15, top: 14, color: "var(--faint)" }}>{Icon.search(18)}</span></div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><Seg value={sort} onChange={setSort} options={[{ value: "due", label: "Határidő" }, { value: "name", label: "Név" }, { value: "money", label: "Kintlévőség" }]} /><button className="chip" aria-pressed={arch} onClick={() => setArch(a => !a)} style={{ marginLeft: "auto" }}>Archivált</button></div>
-      {rows.length === 0 ? <Empty icon={Icon.users(26)} title={q ? "Nincs találat" : arch ? "Nincs archivált cég" : "Még nincs ügyfél"} text={q ? "Próbáljon más keresőszót." : "Rögzítse az első céget, utána jöhetnek a járművek és a sofőrök."} action={!q && !arch ? <button className="btn primary sm" onClick={() => openCapture("company")}>{Icon.plus(16)} Új cég</button> : undefined} />
-        : <div className="list">{rows.map(r => <button key={r.c.id} className="crow" aria-selected={(selectedId || rows[0]?.c.id) === r.c.id} onClick={() => router.push(`${base}/ugyfelek/${r.c.id}`)}>
-          <span className="avatar">{initials(r.c.name)}</span>
-          <span style={{ minWidth: 0 }}><div className="n">{r.c.name}</div><div className="m" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.vehicles} jármű · {r.drivers} sofőr{r.c.tax_id ? <span className="mono"> · {r.c.tax_id}</span> : null}</div></span>
-          <span className="r">{r.next ? <span className={`badge ${relLabel(r.next).tone}`}>{r.overdue ? `${r.overdue} lejárt` : relLabel(r.next).text}</span> : <span className="badge plain">nincs teendő</span>}{r.money > 0 && <span className="mono" style={{ color: "var(--danger-fg)" }}>{fmtFt(r.money)}</span>}</span>
-        </button>)}</div>}
-    </div>
-  );
+  if (!data) return <Skeleton n={5} />;
+  const sel = layout === "phone" ? undefined : (selectedId || rows[0]?.c.id);
   return <>
-    <TopBar title="Ügyfelek" sub={layout === "desktop" ? `${data.companies.filter(c => !c.archived_at).length} aktív cég` : undefined} actions={layout !== "phone" ? <button className="btn primary sm" onClick={() => openCapture("company")}>{Icon.plus(16)} Új cég</button> : <button className="ibtn" onClick={() => openCapture("company")} aria-label="Új cég">{Icon.plus(20)}</button>} />
-    {layout === "phone" ? list : <div className="split"><div className="pane">{list}</div><div className="pane detail">{(selectedId || rows[0]?.c.id) ? <CompanyProfile id={(selectedId || rows[0]!.c.id) as string} embedded /> : <div className="placeholder"><div>{Icon.users(40)}<p style={{ marginTop: 10 }}>Válasszon egy céget a részletekhez,<br />vagy keressen ⌘K-val.</p></div></div>}</div></div>}
+    <button className="btn primary block addbtn" onClick={() => openCapture("company")}>{Icon.plus(18)} Új cég rögzítése</button>
+    <div className="searchin">{Icon.search(18)}<input className="ctl" placeholder="Keresés a cégek között…" value={q} onChange={e => setQ(e.target.value)} /></div>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><Seg value={sort} onChange={setSort} options={[{ value: "due", label: "Határidő" }, { value: "name", label: "Név" }, { value: "money", label: "Kintlévőség" }]} /><button className="chip" aria-pressed={arch} onClick={() => setArch(a => !a)} style={{ marginLeft: "auto" }}>Archivált</button></div>
+    {rows.length === 0 ? <Empty icon={Icon.users(26)} title={q ? "Nincs találat" : arch ? "Nincs archivált cég" : "Még nincs ügyfél"} text={q ? "Próbáljon más keresőszót." : "Rögzítse az első céget, utána jöhetnek a járművek és a sofőrök."} />
+      : <div className="list">{rows.map(r => <button key={r.c.id} className="crow" aria-selected={sel === r.c.id} onClick={() => router.push(`${base}/ugyfelek/${r.c.id}`)}>
+        <span className="avatar">{initials(r.c.name)}</span>
+        <span style={{ minWidth: 0 }}><div className="n">{r.c.name}</div><div className="m" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.drivers} sofőr · {r.vehicles} jármű{r.c.tax_id ? <span className="mono"> · {r.c.tax_id}</span> : null}</div></span>
+        <span className="r">{r.next ? <span className={`badge ${relLabel(r.next).tone}`}>{r.overdue ? `${r.overdue} lejárt` : relLabel(r.next).text}</span> : <span className="badge plain">nincs teendő</span>}{r.money > 0 && <span className="mono" style={{ color: "var(--danger-fg)" }}>{fmtFt(r.money)}</span>}</span>
+        {layout === "phone" && <span style={{ color: "var(--faint)" }}>{Icon.chev(18)}</span>}
+      </button>)}</div>}
   </>;
 }
+/** Ugyanaz a sorrend, mint a lista alapnézete (legközelebbi határidő elöl). */
+export function firstCompanyId(data: ReturnType<typeof useData>) { if (!data) return undefined; const next = (id: string) => data.tasks.filter(t => t.company_id === id && t.status === "open").map(t => t.due_at).sort()[0] || "9"; return data.companies.filter(c => !c.archived_at).sort((a, b) => next(a.id).localeCompare(next(b.id)))[0]?.id; }
 
 type Tab = "overview" | "vehicles" | "drivers" | "tasks" | "invoices" | "log";
 export function CompanyProfile({ id, embedded }: { id: string; embedded?: boolean }) {
@@ -57,13 +57,13 @@ export function CompanyProfile({ id, embedded }: { id: string; embedded?: boolea
   const c = data?.companies.find(x => x.id === id);
   useEffect(() => { if (!c) return; repo.activity(50).then(a => setAct(a.filter(x => x.entity_id === c.id || data!.tasks.some(t => t.id === x.entity_id && t.company_id === c.id) || data!.vehicles.some(v => v.id === x.entity_id && v.company_id === c.id) || data!.drivers.some(d => d.id === x.entity_id && d.company_id === c.id)))).catch(() => {}); }, [repo, c, data, tab]);
   if (!data) return <div className="content"><Skeleton /></div>;
-  if (!c) return <>{!embedded && <TopBar title="Ügyfél" back={`${base}/ugyfelek`} />}<div className="content"><Empty title="Ez a cég nem található" /></div></>;
+  if (!c) return <>{!embedded && <TopBar title="Ügyfél" back={`${base}/adatbank`} />}<div className="content"><Empty title="Ez a cég nem található" /></div></>;
   const vehicles = data.vehicles.filter(v => v.company_id === id && !v.archived_at), drivers = data.drivers.filter(d => d.company_id === id && !d.archived_at), contacts = data.contacts.filter(x => x.company_id === id);
   const tasks = data.tasks.filter(t => t.company_id === id); const open = tasks.filter(t => t.status === "open").sort((a, b) => a.due_at.localeCompare(b.due_at)); const invoices = tasks.filter(t => t.type === "invoice").sort((a, b) => b.due_at.localeCompare(a.due_at));
   const outstanding = invoices.filter(i => !i.paid_at).reduce((s, i) => s + Number(i.gross_amount || 0), 0);
   const lastFor = (kind: "vehicle" | "driver", xid: string, type: "vu_download" | "card_download") => tasks.filter(t => t.type === type && (kind === "vehicle" ? t.vehicle_id === xid : t.driver_id === xid)).sort((a, b) => b.due_at.localeCompare(a.due_at));
   const archive = async () => { if (await confirm({ title: c.archived_at ? "Visszaállítás" : "Cég archiválása", text: c.archived_at ? "A cég újra megjelenik az aktív listában." : "A cég és adatai megmaradnak, de eltűnnek az aktív listákból. Bármikor visszaállítható.", okLabel: c.archived_at ? "Visszaállítás" : "Archiválás" })) await mutate(r => r.company.update(c.id, { archived_at: c.archived_at ? null : new Date().toISOString() }), { success: c.archived_at ? "Visszaállítva" : "Archiválva" }); };
-  const remove = async () => { if (await confirm({ title: "Cég végleges törlése", text: `${c.name}: ${vehicles.length} jármű, ${drivers.length} sofőr és ${tasks.length} tétel törlődik. Nem vonható vissza. Írja be: TÖRLÉS`, okLabel: "Törlés", danger: true, confirmWord: "TÖRLÉS" })) { await mutate(r => r.company.remove(c.id), { success: "Cég törölve" }); router.push(`${base}/ugyfelek`); } };
+  const remove = async () => { if (await confirm({ title: "Cég végleges törlése", text: `${c.name}: ${vehicles.length} jármű, ${drivers.length} sofőr és ${tasks.length} tétel törlődik. Nem vonható vissza. Írja be: TÖRLÉS`, okLabel: "Törlés", danger: true, confirmWord: "TÖRLÉS" })) { await mutate(r => r.company.remove(c.id), { success: "Cég törölve" }); router.push(`${base}/adatbank`); } };
   const header = (
     <div className="card pad" style={{ display: "grid", gridTemplateColumns: "56px 1fr", gap: 14, alignItems: "start" }}>
       <span className="avatar" style={{ width: 56, height: 56, borderRadius: 16, fontSize: 18 }}>{initials(c.name)}</span>
@@ -133,7 +133,7 @@ export function CompanyProfile({ id, embedded }: { id: string; embedded?: boolea
     </>
   );
   if (embedded) return <div className="inner" style={{ display: "flex", flexDirection: "column", gap: 14 }}>{body}</div>;
-  return <><TopBar title={c.name} back={`${base}/ugyfelek`} /><div className="content">{body}</div></>;
+  return <><TopBar title={c.name} back={`${base}/adatbank`} /><div className="content">{body}</div></>;
 }
 function labelAct(a: Activity) { const e = { companies: "Cég", vehicles: "Jármű", drivers: "Sofőr", tasks: "Teendő", contacts: "Kapcsolattartó" }[a.entity] || a.entity; const act = { insert: "létrehozva", update: "módosítva", delete: "törölve", done: "elvégezve" }[a.action] || a.action; const after = a.after as Record<string, unknown> | undefined; const name = (after?.name || after?.plate || (after?.type && TASK_META[after.type as keyof typeof TASK_META]?.short)) as string | undefined; return `${e} ${act}${name ? ` · ${name}` : ""}`; }
 

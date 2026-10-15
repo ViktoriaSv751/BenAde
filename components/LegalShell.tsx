@@ -18,8 +18,8 @@ export default function LegalShell({ kicker, title, updated, summary, toc, child
         <div className="summary">{summary.map(s => <div key={s}>{Check}<span>{s}</span></div>)}</div>
         <nav className="toc" aria-label="Tartalom">{toc.map((t, i) => <a key={t.id} href={`#${t.id}`}>{t.label}<span>{String(i + 1).padStart(2, "0")}</span></a>)}</nav>
         {children}
-        <div className="foot-cta"><Link className="btn primary" href="/register">Elfogadom és folytatom</Link></div>
       </main>
+      <div className="foot-cta"><div className="in"><Link className="btn primary" href="/register">Elfogadom és folytatom</Link></div></div>
     </div>
   );
 }
