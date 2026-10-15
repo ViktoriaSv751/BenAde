@@ -5,7 +5,7 @@ import { TASK_META } from "@/lib/types";
 import { fmtDate, relLabel, timeOf, todayISO } from "@/lib/date";
 import { phoneHref } from "@/lib/format";
 import { useData, useMutate, useSubject, useToast } from "@/lib/data";
-import { Icon, TypeIcon } from "@/components/ui";
+import { ActionSheet, Icon, TypeIcon } from "@/components/ui";
 import { useShell } from "./Shell";
 
 export function haptic(kind: "ok" | "tap" | "warn" = "tap") {
@@ -38,7 +38,7 @@ export function TaskRow({ t, selected, compact, onOpen, selectMode, checked, onT
         .catch(() => setLeaving(false));
     }, 260);
   };
-  const snooze = (days: number) => { setMenu(false); haptic(); mutate(r => r.task.snooze(t.id, days), { success: days === 1 ? "Holnapra halasztva" : `${days} nappal halasztva` }); };
+  const snooze = (days: number) => { haptic(); mutate(r => r.task.snooze(t.id, days), { success: days === 1 ? "Holnapra halasztva" : `${days} nappal halasztva` }); };
   const startPress = () => { if (!onLongPress) return; long.current = false; press.current = setTimeout(() => { long.current = true; haptic(); onLongPress(); }, 480); };
   const endPress = () => { if (press.current) clearTimeout(press.current); };
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -57,12 +57,14 @@ export function TaskRow({ t, selected, compact, onOpen, selectMode, checked, onT
       </span>
       {actions && !done && !selectMode && (
         <span className="qa" onClick={stop} onMouseDown={stop} onTouchStart={stop}>
-          {phone && !compact && <a className="qb" href={phoneHref(phone)} aria-label="Hívás" title="Hívás">{Icon.phone(17)}</a>}
-          {!compact && <span className="qwrap"><button type="button" className="qb" aria-label="Halasztás" title="Halasztás" onClick={() => setMenu(m => !m)}>{Icon.snooze(17)}</button>
-            {menu && <span className="qmenu" role="menu"><button role="menuitem" onClick={() => snooze(1)}>Holnapra</button><button role="menuitem" onClick={() => snooze(3)}>3 nappal</button><button role="menuitem" onClick={() => snooze(7)}>1 héttel</button></span>}</span>}
-          <button type="button" className="qb done" aria-label={t.type === "invoice" ? "Kifizetve" : "Elvégezve"} title={t.type === "invoice" ? "Kifizetve" : "Elvégezve"} onClick={complete}>{Icon.check(18)}</button>
+          {phone && !compact && <a className="qb" href={phoneHref(phone)} aria-label="Hívás" title="Hívás">{Icon.phone(17)}<span className="ql">Hívás</span></a>}
+          {!compact && <button type="button" className="qb" aria-label="Halasztás" title="Halasztás" onClick={() => setMenu(true)}>{Icon.snooze(17)}<span className="ql">Halasztás</span></button>}
+          <button type="button" className="qb done" aria-label={t.type === "invoice" ? "Kifizetve" : "Elvégezve"} title={t.type === "invoice" ? "Kifizetve" : "Elvégezve"} onClick={complete}>{Icon.check(18)}<span className="ql">{t.type === "invoice" ? "Kifizetve" : "Kész"}</span></button>
         </span>
       )}
+      <ActionSheet open={menu} onClose={() => setMenu(false)} title="Mikor emlékeztessünk újra?" sub={`${meta.name} · ${subject(t)}`} options={[
+        { label: "Holnap", hint: "08:00", onPick: () => snooze(1) }, { label: "3 nap múlva", hint: "08:00", onPick: () => snooze(3) },
+        { label: "1 hét múlva", hint: "08:00", onPick: () => snooze(7) }, { label: "2 hét múlva", hint: "08:00", onPick: () => snooze(14) }]} />
     </div>
   );
 }

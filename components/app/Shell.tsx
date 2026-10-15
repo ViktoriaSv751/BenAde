@@ -54,6 +54,8 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   const openTask = useCallback((id: string) => set({ t: id }), [set]);
   const openSearch = useCallback(() => setSearch(true), []);
   useEffect(() => { document.body.dataset.layout = layout; return () => { delete document.body.dataset.layout; }; }, [layout]);
+  // every new page opens at its top
+  useEffect(() => { window.scrollTo(0, 0); document.querySelectorAll<HTMLElement>(".main .content, .main .pane").forEach(el => { el.scrollTop = 0; }); }, [path]);
   const online = useOnline(); const mutate = useMutate(); const toast = useToast(); const router = useRouter();
   const [plusMenu, setPlusMenu] = useState(false); const plusTimer = useRef<ReturnType<typeof setTimeout> | null>(null); const plusLong = useRef(false);
   // actions coming from a notification button: ?t=<id>&do=done|tomorrow

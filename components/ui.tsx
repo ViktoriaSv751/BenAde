@@ -33,6 +33,39 @@ export function Empty({ icon, title, text, action }: { icon?: React.ReactNode; t
 }
 export function Skeleton({ h = 64, n = 3 }: { h?: number; n?: number }) { return <div className="list">{Array.from({ length: n }).map((_, i) => <div key={i} className="skel" style={{ height: h }} />)}</div>; }
 
+/** 10 items per page with ‹ › controls; scrolls back to the list start when the page changes. */
+export function usePaged<T>(items: T[], size = 10, resetKey?: unknown) {
+  const [p, setP] = useState(0);
+  useEffect(() => { setP(0); }, [resetKey]);
+  const pages = Math.max(1, Math.ceil(items.length / size)); const page = Math.min(p, pages - 1);
+  return { slice: items.slice(page * size, page * size + size), page, pages, total: items.length, size, setPage: setP };
+}
+export function Pager({ page, pages, total, size, setPage, anchor }: { page: number; pages: number; total: number; size: number; setPage: (n: number) => void; anchor?: React.RefObject<HTMLElement | null> }) {
+  if (pages <= 1) return null;
+  const go = (n: number) => { setPage(n); requestAnimationFrame(() => anchor?.current?.scrollIntoView({ block: "start", behavior: "smooth" })); };
+  return <nav className="pager" aria-label="Lapozás">
+    <button type="button" onClick={() => go(page - 1)} disabled={page === 0} aria-label="Előző oldal">{Icon.chevL(18)}</button>
+    <span><b>{page * size + 1}–{Math.min(total, (page + 1) * size)}</b> / {total}</span>
+    <button type="button" onClick={() => go(page + 1)} disabled={page >= pages - 1} aria-label="Következő oldal">{Icon.chev(18)}</button>
+  </nav>;
+}
+export function PagedList<T>({ items, render, size = 10, resetKey, className = "list" }: { items: T[]; render: (x: T) => React.ReactNode; size?: number; resetKey?: unknown; className?: string }) {
+  const pg = usePaged(items, size, resetKey); const ref = useRef<HTMLDivElement>(null);
+  return <><div ref={ref} className={className} style={{ scrollMarginTop: 12 }}>{pg.slice.map(render)}</div><Pager {...pg} anchor={ref} /></>;
+}
+
+/** Small choice sheet: bottom sheet on phone, centred card elsewhere. Always fully readable, never clipped. */
+export function ActionSheet({ open, onClose, title, sub, options }: { open: boolean; onClose: () => void; title: string; sub?: string; options: { label: string; hint?: string; onPick: () => void; danger?: boolean }[] }) {
+  useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [open, onClose]);
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(<div className="asheet" onMouseDown={e => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }} onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()} onMouseUp={e => e.stopPropagation()} onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+    <div className="box" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="hd"><div><h3>{title}</h3>{sub && <p>{sub}</p>}</div><button className="ibtn" onClick={onClose} aria-label="Bezárás">{Icon.x(18)}</button></div>
+      <div className="opts">{options.map(o => <button key={o.label} className={o.danger ? "danger" : ""} onClick={() => { onClose(); o.onPick(); }}><span>{o.label}</span>{o.hint && <small>{o.hint}</small>}</button>)}</div>
+    </div>
+  </div>, document.body);
+}
+
 /** Number that rolls to its new value (respects reduced motion). */
 export function CountUp({ value, format = (n: number) => String(n) }: { value: number; format?: (n: number) => string }) {
   const [shown, setShown] = useState(value); const from = useRef(value);
@@ -50,10 +83,12 @@ export function CountUp({ value, format = (n: number) => String(n) }: { value: n
 export function Panel({ open, onClose, title, children, footer, wide, back }: { open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; back?: () => void }) {
   const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), []);
   useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); document.body.style.overflow = "hidden"; return () => { window.removeEventListener("keydown", k); document.body.style.overflow = ""; }; }, [open, onClose]);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (open && ref.current) ref.current.scrollTop = 0; }, [open, title]);
   if (!mounted || !open) return null;
   return createPortal(
     <div className="scrim" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`panel ${wide ? "wide" : ""}`} role="dialog" aria-modal="true">
+      <div ref={ref} className={`panel ${wide ? "wide" : ""}`} role="dialog" aria-modal="true">
         <div className="phead">{back ? <button className="ibtn" onClick={back} aria-label="Vissza">{Icon.back()}</button> : null}<h2>{title}</h2><button className="ibtn" onClick={onClose} aria-label="Bezárás">{Icon.x()}</button></div>
         <div className="pbody">{children}</div>
         {footer && <div className="pfoot">{footer}</div>}

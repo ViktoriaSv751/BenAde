@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F4F5F8" }, { media: "(prefers-color-scheme: dark)", color: "#0A0D14" }],
-  width: "device-width", initialScale: 1, viewportFit: "cover",
+  width: "device-width", initialScale: 1, maximumScale: 1, viewportFit: "cover",
 };
 
 const themeInit = `try{var t=localStorage.getItem('benade.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('benade.textsize')==='lg')document.documentElement.setAttribute('data-textsize','lg')}catch(e){}`;

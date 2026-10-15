@@ -746,3 +746,32 @@ body:not([data-layout="phone"]) .selbar { bottom: 24px; }
 .pushsetup .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--time); flex: none; } .pushsetup .dot.on { background: var(--ok); }
 .pushsetup p { color: var(--muted); font-size: 14px; } .pushsetup p.fine { font-size: 12.5px; color: var(--faint); }
 .pushsetup .steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; } .pushsetup .steps svg { display: inline; vertical-align: -2px; }
+/* action sheet */
+.asheet { position: fixed; inset: 0; z-index: 85; background: rgba(5,8,15,.45); display: grid; place-items: center; padding: 20px; animation: fade var(--t2); }
+.asheet .box { width: min(420px, 100%); background: var(--bg); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-3); padding: 18px; animation: up var(--t2) var(--ease-out); }
+body[data-layout="phone"] .asheet { place-items: end stretch; padding: 0; }
+body[data-layout="phone"] .asheet .box { width: 100%; border-radius: 24px 24px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); border-bottom: 0; }
+.asheet .hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.asheet h3 { font-size: 18px; } .asheet .hd p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.asheet .opts { display: flex; flex-direction: column; gap: 8px; }
+.asheet .opts button { display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 0 16px; border-radius: 14px; background: var(--surface-2); font-weight: 800; font-size: 15.5px; color: var(--fg); transition: background var(--t2), transform var(--t1); }
+.asheet .opts button:hover { background: var(--accent-soft); } .asheet .opts button:active { transform: scale(.98); }
+.asheet .opts button small { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.asheet .opts button.danger { color: var(--danger-fg); background: var(--danger-soft); }
+/* task row: tidy layout, actions never overlap the text */
+.trow .when { flex-wrap: wrap; row-gap: 4px; white-space: normal; }
+.trow .qb .ql { display: none; }
+.shell[data-layout="phone"] .trow:not(.compact) { grid-template-columns: 44px minmax(0, 1fr); align-items: start; row-gap: 0; }
+.shell[data-layout="phone"] .trow:not(.compact) .qa { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.shell[data-layout="phone"] .trow:not(.compact) .qb { width: auto; height: 38px; padding: 0 14px; border-radius: 999px; gap: 6px; display: inline-flex; align-items: center; font-weight: 800; font-size: 13.5px; }
+.shell[data-layout="phone"] .trow:not(.compact) .qb .ql { display: inline; }
+.shell[data-layout="phone"] .trow:not(.compact) .qb.done { width: auto; height: 38px; }
+.trow.compact .qa .qb:not(.done) { display: none; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+.pager button { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--fg); transition: background var(--t2), transform var(--t1); }
+.pager button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent-soft-fg); } .pager button:active:not(:disabled) { transform: scale(.92); }
+.pager button:disabled { opacity: .35; cursor: default; }
+.pager span { font-size: 13.5px; color: var(--muted); font-weight: 700; font-family: var(--font-mono); min-width: 96px; text-align: center; } .pager span b { color: var(--fg); }
+/* no zoom-in when a field gets focus (iOS zooms below 16px) */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (max-width: 899px), (pointer: coarse) { input, select, textarea, .ctl { font-size: 16px !important; } }

@@ -27,7 +27,7 @@ function EmailFallback({ next }: { next: string }) {
       {err && <div className="ferr" role="alert">{err}</div>}
       <button className="btn primary block" type="submit" disabled={busy}>{busy ? "Belépés…" : "Belépés"}</button>
     </form>
-    <div className="auth-links"><Link href="/forgot">Elfelejtett jelszó</Link><span>·</span><Link href="/login">Apple / Google</Link></div>
+    <div className="auth-links"><Link href="/forgot">Elfelejtett jelszó</Link><span>·</span><Link href="/login">Vissza</Link></div>
     </>
   );
 }

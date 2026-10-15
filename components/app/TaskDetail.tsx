@@ -8,6 +8,7 @@ import { dayDiff, fmtDate, fmtDT, relLabel, timeOf, todayISO } from "@/lib/date"
 import { fmtFt, phoneHref } from "@/lib/format";
 import { useData, useMutate, useRepo, useToast, useUndoableRemove } from "@/lib/data";
 import { Icon, Panel, Ring, TypeIcon, useConfirm } from "@/components/ui";
+import { ActionSheet } from "@/components/ui";
 import { useShell, useUrlState } from "./Shell";
 
 export function TaskDetailPanel({ id, onClose }: { id: string | null; onClose: () => void }) {
@@ -100,10 +101,8 @@ export function TaskDetail({ t, onDone }: { t: Task; onDone?: () => void }) {
 
 function SnoozeMenu({ onPick }: { onPick: (d: number) => void }) {
   const [open, setOpen] = useState(false);
-  return <div style={{ position: "relative" }}>
-    <button className="btn secondary" onClick={() => setOpen(o => !o)}>{Icon.snooze()} Halasztás {Icon.chevD(14)}</button>
-    {open && <div className="card" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 5, minWidth: 180, padding: 6, boxShadow: "var(--shadow-3)" }}>
-      {[[1, "Holnap"], [3, "3 nap"], [7, "1 hét"], [14, "2 hét"]].map(([d, l]) => <button key={d} className="btn quiet block" style={{ justifyContent: "flex-start" }} onClick={() => { setOpen(false); onPick(d as number); }}>{l}</button>)}
-    </div>}
-  </div>;
+  return <>
+    <button className="btn secondary" onClick={() => setOpen(true)}>{Icon.snooze()} Halasztás</button>
+    <ActionSheet open={open} onClose={() => setOpen(false)} title="Mikor emlékeztessünk újra?" options={[[1, "Holnap"], [3, "3 nap múlva"], [7, "1 hét múlva"], [14, "2 hét múlva"]].map(([d, l]) => ({ label: l as string, hint: "08:00", onPick: () => onPick(d as number) }))} />
+  </>;
 }

@@ -1,11 +1,11 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Driver, Snapshot, Vehicle } from "@/lib/types";
 import { fmtDate, relLabel } from "@/lib/date";
 import { initials, plateFmt, titleCase } from "@/lib/format";
 import { useData, useMutate } from "@/lib/data";
-import { Empty, Field, Icon, Panel, Seg, Skeleton, Switch, useConfirm } from "@/components/ui";
+import { Empty, Field, Icon, Pager, Panel, Seg, Skeleton, Switch, useConfirm, usePaged } from "@/components/ui";
 import { TopBar, useShell, useUrlState } from "./Shell";
 import { CompanyList, CompanyProfile, HuPlate, firstCompanyId } from "./Customers";
 import { DriverForm, VehicleForm } from "./Capture";
@@ -46,6 +46,7 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
       .sort((a, b) => (cid ? 0 : cname(a.company_id).localeCompare(cname(b.company_id), "hu")) || (isV ? (a as Vehicle).plate.localeCompare((b as Vehicle).plate) : (a as Driver).name.localeCompare((b as Driver).name, "hu")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, cid, q, isV]);
+  const pg = usePaged(items, 10, `${cid}|${q}|${isV}`); const anchor = useRef<HTMLDivElement>(null);
   const nextFor = (id: string) => data.tasks.filter(t => t.status === "open" && (isV ? t.vehicle_id === id && t.type === "vu_download" : t.driver_id === id && t.type === "card_download")).sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
   const lastFor = (id: string) => data.tasks.filter(t => t.status === "done" && (isV ? t.vehicle_id === id && t.type === "vu_download" : t.driver_id === id && t.type === "card_download")).sort((a, b) => (b.done_at || "").localeCompare(a.done_at || ""))[0];
   const preview = isV ? plateFmt(val) : titleCase(val);
@@ -126,7 +127,7 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
       <div className="sec" style={{ marginTop: 0 }}><h2>{isV ? "Rögzített járművek" : "Rögzített gépkocsivezetők"}{company ? <span className="ofc"> ({company.name})</span> : null}</h2><span className="n">{items.length}</span></div>
       <div className="searchin">{Icon.search(18)}<input className="ctl" placeholder={isV ? "Keresés rendszámra vagy cégre…" : "Keresés névre vagy cégre…"} value={q} onChange={e => setQ(e.target.value)} /></div>
       {items.length === 0 ? <Empty icon={isV ? Icon.truck(26) : Icon.user(26)} title={q ? "Nincs találat" : isV ? "Még nincs jármű" : "Még nincs gépkocsivezető"} text={!q && cid ? (isV ? "Írja be a rendszámot fent, és rögzítse." : "Írja be a nevet fent, és rögzítse.") : undefined} />
-        : <div className="card" style={{ padding: "0 14px" }}><div className="rows">{items.map(x => { const nx = nextFor(x.id), last = lastFor(x.id); const v = x as Vehicle, d = x as Driver; return (
+        : <><div ref={anchor} className="card" style={{ padding: "0 14px", scrollMarginTop: 12 }}><div className="rows">{pg.slice.map(x => { const nx = nextFor(x.id), last = lastFor(x.id); const v = x as Vehicle, d = x as Driver; return (
           <div className="rowi dbrow" key={x.id}>
             <span className={`avatar ${isV ? "t-vu" : "t-card"}`}>{isV ? Icon.truck(18) : initials(d.name)}</span>
             <span style={{ minWidth: 0 }}>
@@ -138,7 +139,7 @@ function SubjectBank({ kind }: { kind: "driver" | "vehicle" }) {
               <button type="button" aria-label="Szerkesztés" className="pen" onClick={() => setEdit(x.id)}>{Icon.pen(17)}</button>
               <button type="button" aria-label="Törlés" className="del" onClick={() => remove(x)}>{Icon.trash(17)}</button>
             </span>
-          </div>); })}</div></div>}
+          </div>); })}</div></div><Pager {...pg} anchor={anchor} /></>}
     </div>
   );
   return <>

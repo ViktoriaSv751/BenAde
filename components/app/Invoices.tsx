@@ -10,7 +10,7 @@ import {
   lastReminder, mailtoHref, monthlySeries, niceMax, outstanding, paidDate, paymentStats, reminderLine, shortDate, smsHref, sumGross,
   type Bucket, type DunningLevel, type MonthPoint, type Outstanding, type PayStats, type ReminderChannel,
 } from "@/lib/insights";
-import { Empty, Icon, Panel, Seg, Skeleton, useConfirm } from "@/components/ui";
+import { Empty, Icon, Pager, Panel, Seg, Skeleton, useConfirm, usePaged } from "@/components/ui";
 import { TaskDetail } from "./TaskDetail";
 import { TopBar, useShell, useUrlState } from "./Shell";
 
@@ -39,6 +39,7 @@ export function InvoicesView() {
     const cmp = (a: Task, b: Task) => s === "amount" ? gross(a) - gross(b) : s === "company" ? name(a).localeCompare(name(b), "hu") : s === "no" ? String(a.invoice_no || "").localeCompare(String(b.invoice_no || ""), "hu", { numeric: true }) : s === "issue" ? String(a.issue_date || "").localeCompare(String(b.issue_date || "")) : a.due_at.localeCompare(b.due_at);
     return r.sort((a, b) => dir * cmp(a, b) || a.due_at.localeCompare(b.due_at));
   }, [scoped, f, s, dir, data, t]);
+  const pg = usePaged(rows, 10, `${f}|${s}|${dir}|${cid}`); const anchor = useRef<HTMLDivElement>(null);
   // drop selections that are no longer visible / unpaid
   useEffect(() => { setSel(p => { const vis = new Set(rows.filter(x => !isPaid(x)).map(x => x.id)); const n = new Set([...p].filter(id => vis.has(id))); return n.size === p.size ? p : n; }); }, [rows]);
 
@@ -115,12 +116,12 @@ export function InvoicesView() {
 
       {rows.length === 0 ? empty
         : table ? (
-          <div className="card inv-tablewrap"><table className="table inv-table">
+          <><div ref={anchor} className="card inv-tablewrap" style={{ scrollMarginTop: 12 }}><table className="table inv-table">
             <thead><tr>
               <th className="cb"><input type="checkbox" checked={allSel} disabled={!unpaidRows.length} onChange={() => setSel(allSel ? new Set() : new Set(unpaidRows.map(x => x.id)))} aria-label="Összes kijelölése" /></th>
               <Th k="company" s={s} dir={dir} onSort={sortBy}>Cég</Th><Th k="no" s={s} dir={dir} onSort={sortBy}>Számlaszám</Th><Th k="issue" s={s} dir={dir} onSort={sortBy}>Kiállítva</Th><Th k="due" s={s} dir={dir} onSort={sortBy}>Határidő</Th><Th k="amount" s={s} dir={dir} onSort={sortBy} right>Bruttó</Th><th>Állapot</th><th className="r"><span className="sr">Műveletek</span></th>
             </tr></thead>
-            <tbody>{rows.map(x => { const st = invoiceStatus(x, t); const paid = isPaid(x); const rem = !paid ? lastReminder(x.note) : null; const h = !cid && !paid ? habitLabel(stats.get(x.company_id), 2) : null; const od = daysOverdue(x, t);
+            <tbody>{pg.slice.map(x => { const st = invoiceStatus(x, t); const paid = isPaid(x); const rem = !paid ? lastReminder(x.note) : null; const h = !cid && !paid ? habitLabel(stats.get(x.company_id), 2) : null; const od = daysOverdue(x, t);
               return <tr key={x.id} onClick={() => open(x.id)} aria-selected={sel.has(x.id)} className={st.tone === "over" ? "over" : ""}>
                 <td className="cb" onClick={e => e.stopPropagation()}>{!paid && <input type="checkbox" checked={sel.has(x.id)} onChange={() => toggle(x.id)} aria-label={`${x.invoice_no || "Számla"} kijelölése`} />}</td>
                 <td><div className="co">{companyNameOf(data, x.company_id)}</div>{h && <div className={`inv-habit sm ${h.tone}`}>{h.text}</div>}</td>
@@ -133,8 +134,8 @@ export function InvoicesView() {
                 </div>}</td>
               </tr>; })}</tbody>
             <tfoot><tr><td colSpan={5} className="r" style={{ color: "var(--muted)" }}>Összesen</td><td className="mono r amt">{fmtFt(sumGross(rows))}</td><td colSpan={2}></td></tr></tfoot>
-          </table></div>
-        ) : <div className="inv-list">{rows.map(x => <InvoiceCard key={x.id} t={x} data={data} today={t} stats={!cid ? stats.get(x.company_id) : undefined} selected={selTask?.id === x.id} onOpen={() => open(x.id)} {...actions} />)}</div>}
+          </table></div><Pager {...pg} anchor={anchor} /></>
+        ) : <><div ref={anchor} style={{ scrollMarginTop: 12 }} /><div className="inv-list">{pg.slice.map(x => <InvoiceCard key={x.id} t={x} data={data} today={t} stats={!cid ? stats.get(x.company_id) : undefined} selected={selTask?.id === x.id} onOpen={() => open(x.id)} {...actions} />)}</div><Pager {...pg} anchor={anchor} /></>}
       {confirmEl}
     </div>
   );

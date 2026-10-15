@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +12,11 @@ const Play = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke=
 export default function SocialAuth({ next = "/app", verb = "Folytatás", emailHref }: { next?: string; verb?: string; emailHref?: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // only show providers that are switched on in Supabase (public auth settings endpoint)
+  const [prov, setProv] = useState<{ apple: boolean; google: boolean } | null>(null);
+  useEffect(() => { const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; if (!url || !key) { setProv({ apple: false, google: false }); return; }
+    fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } }).then(r => r.json()).then(j => setProv({ apple: !!j?.external?.apple, google: !!j?.external?.google })).catch(() => setProv({ apple: false, google: false })); }, []);
+  const anySocial = !!prov && (prov.apple || prov.google);
   async function go(provider: "google" | "apple") {
     setBusy(provider); setErr(null);
     const sb = createClient();
@@ -20,10 +25,11 @@ export default function SocialAuth({ next = "/app", verb = "Folytatás", emailHr
   }
   return (
     <div className="social">
-      <button type="button" className="btn apple" onClick={() => go("apple")} disabled={!!busy}>{A}<span>{busy === "apple" ? "Átirányítás…" : `${verb} Apple-lel`}</span></button>
-      <button type="button" className="btn google" onClick={() => go("google")} disabled={!!busy}>{G}<span>{busy === "google" ? "Átirányítás…" : `${verb} Google-lel`}</span></button>
+      {prov === null && <div className="btn mail" aria-hidden style={{ opacity: .4 }} />}
+      {prov?.apple && <button type="button" className="btn apple" onClick={() => go("apple")} disabled={!!busy}>{A}<span>{busy === "apple" ? "Átirányítás…" : `${verb} Apple-lel`}</span></button>}
+      {prov?.google && <button type="button" className="btn google" onClick={() => go("google")} disabled={!!busy}>{G}<span>{busy === "google" ? "Átirányítás…" : `${verb} Google-lel`}</span></button>}
       {err && <div className="ferr" role="alert">{err}</div>}
-      {emailHref && <Link className="btn mail" href={emailHref}>{M}<span>{verb} e-mail-címmel</span></Link>}
+      {emailHref && prov !== null && <Link className={`btn ${anySocial ? "mail" : "apple"}`} href={emailHref}>{M}<span>{verb} e-mail-címmel</span></Link>}
       <div className="or">vagy</div>
       <Link className="btn test" href="/demo">{Play}<span>Belépés tesztfiókkal</span></Link>
       <p className="test-note">Azonnal kipróbálható, regisztráció és jelszó nélkül – három hónapnyi mintaadattal.</p>

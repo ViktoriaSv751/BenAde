@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Activity, Company, Contact, Driver, Snapshot, Task, Vehicle } from "@/lib/types";
@@ -8,7 +8,7 @@ import type { PortalCompany } from "@/lib/repo";
 import { MONTHS, addDays, dateOf, dayDiff, fmtDT, fmtDate, relLabel, toTS, todayISO } from "@/lib/date";
 import { fmtFt, initials, phoneHref, titleCase } from "@/lib/format";
 import { useData, useMutate, useRepo, useToast } from "@/lib/data";
-import { Chips, Empty, Field, Icon, Panel, Seg, Skeleton, Tabs, useConfirm } from "@/components/ui";
+import { Chips, Empty, Field, Icon, PagedList, Pager, Panel, Seg, Skeleton, Tabs, useConfirm, usePaged } from "@/components/ui";
 import { TaskRow } from "./TaskRow";
 import { TopBar, useShell, useUrlState } from "./Shell";
 import { CompanyForm, DriverForm, VehicleForm } from "./Capture";
@@ -113,6 +113,7 @@ export function CompanyList({ selectedId }: { selectedId?: string }) {
     }).sort((a, b) => sort === "name" ? a.c.name.localeCompare(b.c.name, "hu") : sort === "money" ? b.money - a.money : (a.next || "9").localeCompare(b.next || "9"));
   }, [data, q, sort, arch]);
   const rows = hf === "all" ? all : all.filter(r => r.h === hf);
+  const pg = usePaged(rows, 10, `${q}|${sort}|${arch}|${hf}`); const anchor = useRef<HTMLDivElement>(null);
   const dups = useMemo(() => (data ? findDuplicates(data.companies) : []).filter(d => !dismissed.includes(d.key)), [data, dismissed]);
   if (!data) return <Skeleton n={5} />;
   const sel = layout === "phone" ? undefined : (selectedId || rows[0]?.c.id);
@@ -133,12 +134,12 @@ export function CompanyList({ selectedId }: { selectedId?: string }) {
     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><Seg value={sort} onChange={setSort} options={[{ value: "due", label: "Határidő" }, { value: "name", label: "Név" }, { value: "money", label: "Kintlévőség" }]} /><button className="chip" aria-pressed={arch} onClick={() => setArch(a => !a)} style={{ marginLeft: "auto" }}>Archivált</button></div>
     <div className="hchips"><Chips value={hf} onChange={setHf} options={[{ value: "all", label: "Mind", count: all.length }, { value: "over", label: "Lejárt", count: cnt("over") }, { value: "soon", label: "Hamarosan", count: cnt("soon") }, { value: "ok", label: "Rendben", count: cnt("ok") }]} /></div>
     {rows.length === 0 ? <Empty icon={Icon.users(26)} title={q || hf !== "all" ? "Nincs találat" : arch ? "Nincs archivált cég" : "Még nincs ügyfél"} text={hf !== "all" ? "Ebben a kategóriában nincs cég." : q ? "Próbáljon más keresőszót." : "Rögzítse az első céget, utána jöhetnek a járművek és a sofőrök."} action={hf !== "all" ? <button className="btn ghost sm" onClick={() => setHf("all")}>Összes cég mutatása</button> : undefined} />
-      : <div className="list">{rows.map(r => <button key={r.c.id} className="crow" aria-selected={sel === r.c.id} onClick={() => router.push(`${base}/ugyfelek/${r.c.id}`)}>
+      : <><div ref={anchor} className="list" style={{ scrollMarginTop: 12 }}>{pg.slice.map(r => <button key={r.c.id} className="crow" aria-selected={sel === r.c.id} onClick={() => router.push(`${base}/ugyfelek/${r.c.id}`)}>
         <HealthAvatar name={r.c.name} health={r.h} />
         <span style={{ minWidth: 0 }}><div className="n">{r.c.name}</div><div className="m" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><HealthWord health={r.h} /> · {r.drivers} sofőr · {r.vehicles} jármű{r.c.tax_id ? <span className="mono"> · {r.c.tax_id}</span> : null}</div></span>
         <span className="r">{r.next ? <span className={`badge ${relLabel(r.next).tone}`}>{r.overdue ? `${r.overdue} lejárt` : relLabel(r.next).text}</span> : <span className="badge plain">nincs teendő</span>}{r.money > 0 && <span className="mono" style={{ color: "var(--danger-fg)" }}>{fmtFt(r.money)}</span>}</span>
         {layout === "phone" && <span style={{ color: "var(--faint)" }}>{Icon.chev(18)}</span>}
-      </button>)}</div>}
+      </button>)}</div><Pager {...pg} anchor={anchor} /></>}
   </>;
 }
 /** Ugyanaz a sorrend, mint a lista alapnézete (legközelebbi határidő elöl). */
@@ -217,12 +218,12 @@ export function CompanyProfile({ id, embedded }: { id: string; embedded?: boolea
       </>}
       {tab === "tasks" && <>
         <div className="sec" style={{ marginTop: 6 }}><h2>Nyitott teendők</h2><span className="n">{open.length}</span></div>
-        {open.length ? <div className="list">{open.map(t => <TaskRow key={t.id} t={t} compact={layout === "desktop"} swipe={false} />)}</div> : <Empty title="Nincs nyitott teendő" />}
+        {open.length ? <PagedList items={open} resetKey={id} render={t => <TaskRow key={t.id} t={t} compact={layout === "desktop"} swipe={false} />} /> : <Empty title="Nincs nyitott teendő" />}
         {tasks.some(t => t.status !== "open" && t.type !== "invoice") && <><div className="sec"><h2>Elvégzett</h2></div><div className="list">{tasks.filter(t => t.status !== "open" && t.type !== "invoice").sort((a, b) => (b.done_at || "").localeCompare(a.done_at || "")).slice(0, 20).map(t => <TaskRow key={t.id} t={t} compact swipe={false} />)}</div></>}
       </>}
       {tab === "invoices" && <>
         <div className="sec" style={{ marginTop: 6 }}><h2>Számlák</h2><button className="btn primary sm" onClick={() => openCapture("invoice", { cid: c.id })}>{Icon.plus(14)} Új számla</button></div>
-        {invoices.length ? <div className="list">{invoices.map(t => <TaskRow key={t.id} t={t} compact swipe={false} />)}</div> : <Empty title="Nincs számla" />}
+        {invoices.length ? <PagedList items={invoices} resetKey={id} render={t => <TaskRow key={t.id} t={t} compact swipe={false} />} /> : <Empty title="Nincs számla" />}
       </>}
       {tab === "log" && <CompanyTimeline c={c} data={data} act={act} />}
       {confirmEl}
@@ -375,7 +376,7 @@ function labelAct(a: Activity) { const e = { companies: "Cég", vehicles: "Járm
 function PortalCard({ c, demo, canEdit }: { c: PortalCompany; demo: boolean; canEdit: boolean }) {
   const mutate = useMutate(); const toast = useToast(); const { confirm, confirmEl } = useConfirm();
   const [origin, setOrigin] = useState(""); useEffect(() => setOrigin(window.location.origin), []);
-  const token = c.portal_token || null; const url = token ? `${origin}/p/${token}` : "";
+  const token = c.portal_token || null; const url = token ? `${origin}${demo ? "/demo" : ""}/p/${token}` : "";
   const create = () => mutate(r => r.company.setPortalToken(c.id, newToken()), { success: "Ügyfélportál link létrehozva" });
   const revoke = async () => { if (await confirm({ title: "Link visszavonása", text: "A jelenlegi link azonnal érvénytelenné válik; aki megkapta, többé nem látja az adatokat. Később új linket hozhat létre.", okLabel: "Visszavonás", danger: true })) await mutate(r => r.company.setPortalToken(c.id, null), { success: "Link visszavonva" }); };
   const copy = async () => { try { await navigator.clipboard.writeText(url); toast("Link a vágólapon", "ok"); } catch { toast("A másolás nem sikerült", "err"); } };
@@ -385,11 +386,11 @@ function PortalCard({ c, demo, canEdit }: { c: PortalCompany; demo: boolean; can
       <div className="url mono" title={url}>{url || "…"}</div>
       <div className="acts">
         <button className="btn secondary sm" onClick={copy}>{Icon.copy(14)} Link másolása</button>
-        {!demo && <a className="btn secondary sm" href={url} target="_blank" rel="noopener">{Icon.external(14)} Megnyitás</a>}
+        {<a className="btn secondary sm" href={url} target="_blank" rel="noopener">{Icon.external(14)} Megnyitás</a>}
         {canEdit && <button className="btn danger sm" onClick={revoke}>{Icon.x(14)} Visszavonás</button>}
       </div>
     </> : canEdit ? <button className="btn primary sm" onClick={create}>{Icon.plus(14)} Link létrehozása</button> : <div className="s">Még nincs ügyfélportál link.</div>}
-    {demo && <div className="info" style={{ marginTop: 10 }}>{Icon.info()}<span>A tesztfiókban a link csak próbaként jön létre: a nyilvános oldal éles fiókban, valós adatokkal működik.</span></div>}
+    {demo && <div className="info" style={{ marginTop: 10 }}>{Icon.info()}<span>A tesztfiókban a link ezen az eszközön nyitható meg (a tesztadatok csak itt vannak). Saját fiókban a link bárkinek elküldhető.</span></div>}
     {confirmEl}
   </div>;
 }

@@ -6,7 +6,7 @@ import { TASK_META } from "@/lib/types";
 import { DAYS_SHORT, addDays, dayDiff, fmtDate, fmtLong, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
 import { fmtFt, initials, phoneHref } from "@/lib/format";
 import { useData, useMutate, useSubject, useToast } from "@/lib/data";
-import { Chips, CountUp, Empty, Icon, Ring, Skeleton } from "@/components/ui";
+import { Chips, CountUp, Empty, Icon, PagedList, Ring, Skeleton } from "@/components/ui";
 import { TaskRow, haptic } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
 import { PushSetup } from "./PushSetup";
@@ -91,9 +91,9 @@ export function TodayView() {
       {day && <div className="sec" style={{ marginTop: 4 }}><h2>{fmtLong(parseISODate(day))}</h2><button className="btn quiet sm" onClick={() => setDay(null)}>Összes</button></div>}
       {groups ? groups.map(g => { const isClosed = g.key !== "over" && closed.has(g.key); return <div key={g.key}>
           <button className={`grp-h ${g.key === "over" ? "over" : ""}`} aria-expanded={!isClosed} disabled={g.key === "over"} onClick={() => setClosed(s => { const n = new Set(s); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}><h2>{g.label} <span className="k">{g.items.length}</span></h2>{g.key !== "over" && Icon.chevD(16)}</button>
-          {!isClosed && <div className="list" style={{ marginTop: 8 }}>{g.items.map(row)}</div>}
+          {!isClosed && <div style={{ marginTop: 8 }}><PagedList items={g.items} render={row} resetKey={g.key} /></div>}
         </div>; })
-        : list.length ? <div className="list">{list.map(row)}</div>
+        : list.length ? <PagedList items={list} render={row} resetKey={`${filter}|${day}`} />
         : !onboarding && <Empty icon={Icon.check(28)} title={filter === "over" ? "Nincs lejárt tétel" : filter === "today" ? "Ma nincs teendő" : filter === "done" ? "Még nincs elvégzett tétel" : day ? "Ezen a napon nincs teendő" : "Nincs nyitott teendő"} text={filter === "open" && !day ? "Rögzítsen egy letöltést, oktatást vagy számlát a + gombbal." : undefined} action={filter === "open" && !day ? <button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Új rögzítés</button> : undefined} />}
       {!onboarding && !sel && layout !== "desktop" && open.length > 1 && <p style={{ textAlign: "center", fontSize: 12.5, color: "var(--faint)" }}>Tipp: tartsa nyomva egy tételt, és többet is lezárhat egyszerre.</p>}
       {sel && <div className="selbar" role="toolbar"><b>{sel.size} kijelölve</b><button className="btn on" onClick={() => bulk("done")}>{Icon.check(16)} Kész</button><button className="btn secondary" onClick={() => bulk("snooze")}>Holnapra</button><button className="btn tr" onClick={() => setSel(null)} aria-label="Mégse">{Icon.x(16)}</button></div>}

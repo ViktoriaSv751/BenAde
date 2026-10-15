@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { fmtDT } from "@/lib/date";
 import { useData, useMutate, useToast } from "@/lib/data";
-import { Chips, Empty, Icon, Skeleton, Switch } from "@/components/ui";
+import { Chips, Empty, Icon, PagedList, Skeleton, Switch } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { TopBar, useShell } from "./Shell";
 import { PushSetup } from "./PushSetup";
@@ -14,7 +14,7 @@ export function NotificationsView() {
   const [flt, setFlt] = useState<"all" | "unread" | "today" | "inv">("all");
   useEffect(() => { pushSupport().then(setPush); }, []);
   if (!data) return <><TopBar title="Értesítések" /><div className="content"><Skeleton /></div></>;
-  const all = data.notifications; const unread = all.filter(n => n.status !== "opened");
+  const nowIso = new Date().toISOString(); const all = data.notifications.filter(n => n.scheduled_at <= nowIso); const unread = all.filter(n => n.status !== "opened");
   const today = new Date().toISOString().slice(0, 10);
   const list = all.filter(n => flt === "unread" ? n.status !== "opened" : flt === "today" ? n.scheduled_at.slice(0, 10) === today : flt === "inv" ? (n.task_id && data.tasks.find(t => t.id === n.task_id)?.type === "invoice") : true);
   const sendTest = async () => {
@@ -38,13 +38,13 @@ export function NotificationsView() {
   );
   const feed = (
     <>
-      <div className="sec" style={{ marginTop: 0 }}><h2>Előzmények</h2>{unread.length > 0 && <button className="btn quiet sm" onClick={() => mutate(r => r.notification.markAllOpened())}>Mind olvasott</button>}</div>
+      <div className="sec" style={{ marginTop: 32 }}><h2>Előzmények</h2>{unread.length > 0 && <button className="btn quiet sm" onClick={() => mutate(r => r.notification.markAllOpened())}>Mind olvasott</button>}</div>
       <Chips value={flt} onChange={setFlt} options={[{ value: "all", label: "Mind", count: all.length }, { value: "unread", label: "Olvasatlan", count: unread.length }, { value: "today", label: "Ma" }, { value: "inv", label: "Számlák" }]} />
       {list.length === 0 ? <Empty icon={Icon.bell(26)} title="Még nincs értesítés" text="Itt jelennek meg az elküldött emlékeztetők. Az első a következő határidő előtt 7 nappal érkezik." />
-        : <div className="list">{list.map(n => <button key={n.id} className="trow" style={{ opacity: n.status === "opened" ? .72 : 1 }} onClick={() => { if (n.status !== "opened") mutate(r => r.notification.markOpened(n.id)); if (n.task_id) openTask(n.task_id); }}>
+        : <PagedList items={list} resetKey={flt} render={n => <button key={n.id} className="trow" style={{ opacity: n.status === "opened" ? .72 : 1 }} onClick={() => { if (n.status !== "opened") mutate(r => r.notification.markOpened(n.id)); if (n.task_id) openTask(n.task_id); }}>
           <span className="ico" style={{ background: n.status === "opened" ? "var(--surface-3)" : "var(--accent-soft)", color: n.status === "opened" ? "var(--muted)" : "var(--accent)" }}>{Icon.bell(18)}</span>
           <span className="body"><div className="name">{n.title}</div><div className="meta">{n.body}</div><div className="note" style={{ display: "flex", gap: 8, alignItems: "center" }}><span className="mono">{fmtDT(n.scheduled_at)}</span>{n.status !== "opened" && <span className="badge today">új</span>}</div></span>
-        </button>)}</div>}
+        </button>} />}
     </>
   );
   return <>
