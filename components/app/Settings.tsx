@@ -1,11 +1,14 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import type { Snapshot, WorkspaceDefaults } from "@/lib/types";
+import type { Snapshot, WorkRota, WorkspaceDefaults } from "@/lib/types";
 import { useData, useMutate, useRepo, useToast } from "@/lib/data";
 import { DemoRepo, companyNameOf } from "@/lib/repo";
 import { createClient } from "@/lib/supabase/client";
-import { Copyable, Field, Icon, Skeleton, useConfirm } from "@/components/ui";
+import { Copyable, Field, Icon, Skeleton, Switch, useConfirm } from "@/components/ui";
+import { DateField } from "@/components/DateTime";
+import { DAYS_SHORT, addDays, fmtDate, parseISODate, todayISO } from "@/lib/date";
+import { isLocked } from "@/lib/rota";
 import { ThemeToggle, TopBar, useShell } from "./Shell";
 
 export function SettingsView() {
@@ -23,6 +26,9 @@ export function SettingsView() {
         </section>
         <section className="card pad"><Head icon={Icon.clock(18)} title="Ciklusok és emlékeztetők" sub="A jogszabályi alapértékek – csak indokolt esetben módosítsa" />
           <DefaultsForm disabled={!canEdit} />
+        </section>
+        <section className="card pad" id="munkarend"><Head icon={Icon.lock(18)} title="Munkarend" sub="Lezárt napok – ezekre nem kap emlékeztetőt" />
+          <RotaForm disabled={!canEdit} />
         </section>
         <section className="card pad"><Head icon={Icon.user(18)} title="Fiók" sub={email} />
           <AccountForm />
@@ -76,7 +82,7 @@ function DefaultsForm({ disabled }: { disabled: boolean }) {
   const [f, setF] = useState<WorkspaceDefaults>({ ...d }); const [dirty, setDirty] = useState(false);
   const num = (k: keyof WorkspaceDefaults) => <input className="ctl mono" type="number" min={1} value={f[k] as number} disabled={disabled} onChange={e => { setF({ ...f, [k]: Number(e.target.value) }); setDirty(true); }} />;
   const days = [14, 7, 3, 1, 0];
-  return <form onSubmit={async e => { e.preventDefault(); await mutate(r => r.workspace.update({ defaults: f }), { success: "Alapértékek mentve" }); setDirty(false); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+  return <form onSubmit={async e => { e.preventDefault(); await mutate(r => r.workspace.update({ defaults: { ...f, workRota: d.workRota, dayOverrides: d.dayOverrides } }), { success: "Alapértékek mentve" }); setDirty(false); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
     <div className="row2"><Field label="Fedélzeti egység (nap)" id="d1" hint="Jogszabály: 90">{num("vuDays")}</Field><Field label="Vezetői kártya (nap)" id="d2" hint="Jogszabály: 28">{num("cardDays")}</Field></div>
     <div className="row2"><Field label="Kalibráció (nap)" id="d3" hint="2 év = 730">{num("calibrationDays")}</Field><Field label="Kártya lejárat (nap)" id="d4" hint="5 év = 1825">{num("cardExpiryDays")}</Field></div>
     <div className="row2"><Field label="Számla fizetési határidő (nap)" id="d5">{num("invoiceDays")}</Field><Field label="ÁFA %" id="d6">{num("vatPercent")}</Field></div>
@@ -86,6 +92,33 @@ function DefaultsForm({ disabled }: { disabled: boolean }) {
     <div className="info">{Icon.clock()}<span>{(() => { const due = new Date(); due.setDate(due.getDate() + 28); const f2 = (x: Date) => `${x.getMonth() + 1}. ${x.getDate()}.`; const pts = f.remindDaysBefore.map(n => { const x = new Date(due); x.setDate(x.getDate() - n); return `${f2(x)} ${f.remindTime}`; }); return <>Példa: egy ma letöltött vezetői kártya következő határideje {f2(due)} – ekkor szólunk: <b>{pts.join(" · ") || "soha"}</b>.</>; })()}</span></div>
     <Field label="Oktatás-emlékeztetők" hint="Előző nap 16:00 és aznap 06:00 az alapértelmezés"><div className="chips">{[["-1T16:00", "előző nap 16:00"], ["-1T18:00", "előző nap 18:00"], ["0T06:00", "aznap 06:00"], ["0T07:00", "aznap 07:00"]].map(([v, l]) => <button type="button" key={v} className="chip" disabled={disabled} aria-pressed={f.trainingTimes.includes(v)} onClick={() => { const s = new Set(f.trainingTimes); if (s.has(v)) s.delete(v); else s.add(v); setF({ ...f, trainingTimes: [...s] }); setDirty(true); }}>{l}</button>)}</div></Field>
     {!disabled && <button className="btn primary sm" type="submit" disabled={!dirty} style={{ alignSelf: "flex-start" }}>{Icon.check(14)} Mentés</button>}
+  </form>;
+}
+
+/** Munkarend: n work days from a start day, then m locked days, repeating; single days can be changed in the Calendar. */
+function RotaForm({ disabled }: { disabled: boolean }) {
+  const data = useData()!; const mutate = useMutate(); const def = data.workspace.defaults; const today = todayISO();
+  const [f, setF] = useState<WorkRota>(def.workRota || { enabled: false, start: today, on: 1, off: 3 }); const [dirty, setDirty] = useState(false);
+  const up = (p: Partial<WorkRota>) => { setF({ ...f, ...p }); setDirty(true); };
+  const preview = { ...def, workRota: f }; const days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
+  const manual = Object.keys(def.dayOverrides || {}).filter(k => k >= today).sort();
+  const save = (rota: WorkRota, overrides = def.dayOverrides, msg = rota.enabled ? "Munkarend mentve" : "Munkarend kikapcsolva") =>
+    mutate(async r => { await r.workspace.update({ defaults: { ...def, workRota: rota, dayOverrides: overrides } }); return r.workspace.reapplyLocks(); }, { success: msg }).then(() => setDirty(false));
+  const count = (k: "on" | "off", label: string) => <Field label={label} id={`ro-${k}`}><select className="ctl" id={`ro-${k}`} value={f[k]} disabled={disabled} onChange={e => up({ [k]: Number(e.target.value) })}>{Array.from({ length: 14 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n} nap</option>)}</select></Field>;
+  return <form onSubmit={e => { e.preventDefault(); save(f); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="srow" style={{ border: 0, padding: 0 }}><div><div className="k">Ismétlődő munkarend</div><div className="d">Pl. 1 nap munka, utána 3 nap lezárva – és így tovább.</div></div><Switch checked={f.enabled} onChange={v => { if (!disabled) up({ enabled: v }); }} label="Ismétlődő munkarend" /></div>
+    {f.enabled && <>
+      <Field label="Első munkanap" id="ro-start" hint="Ettől a naptól indul a minta."><DateField id="ro-start" label="Első munkanap" value={f.start} onChange={v => up({ start: v })} quick={["today"]} /></Field>
+      <div className="row2">{count("on", "Munkanapok egymás után")}{count("off", "Utána lezárt napok")}</div>
+    </>}
+    <div><div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--muted)", marginBottom: 6 }}>A következő 2 hét</div>
+      <div className="rota-strip">{days.map(iso => { const lk = isLocked(iso, preview); const d = parseISODate(iso); return <span key={iso} className={lk ? "locked" : ""} title={lk ? "Lezárt nap" : "Munkanap"}><small>{DAYS_SHORT[d.getDay()]}</small><b>{d.getDate()}</b></span>; })}</div>
+      <div className="rota-legend"><span><i /> munkanap</span><span><i className="locked" /> lezárt nap</span></div>
+    </div>
+    <div className="info">{Icon.info()}<span>Lezárt napra nem küldünk emlékeztetőt: az előtte lévő utolsó munkanapon szólunk. Ha lezárt napra rögzít határidőt, figyelmeztetünk. Egy-egy napot a <b>Naptárban</b> is lezárhat vagy feloldhat.</span></div>
+    {manual.length > 0 && <div className="srow" style={{ border: 0, padding: 0 }}><div><div className="k">Kézi módosítások</div><div className="d">{manual.slice(0, 6).map(k => `${fmtDate(k)} ${def.dayOverrides![k] === "lock" ? "lezárva" : "feloldva"}`).join(" · ")}{manual.length > 6 ? " …" : ""}</div></div>{!disabled && <button type="button" className="btn ghost sm" onClick={() => save(def.workRota || f, {}, "Kézi módosítások törölve")}>Törlés</button>}</div>}
+    {!disabled && <button className="btn primary sm" type="submit" disabled={!dirty} style={{ alignSelf: "flex-start" }}>{Icon.check(14)} Mentés</button>}
+    {disabled && <div className="hint" style={{ fontSize: 12.5, color: "var(--muted)" }}>Csak a tulajdonos módosíthatja.</div>}
   </form>;
 }
 

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui";
 import { DAYS, MONTHS, MONTHS_SHORT, addDays, addMonths, fmtDate, monthGrid, pad, parseISODate, todayISO } from "@/lib/date";
+import { dayOverride, isLocked, rotaActive } from "@/lib/rota";
 
 /* ---------------- holidays ---------------- */
 /** Easter Sunday (anonymous Gregorian algorithm). */
@@ -39,14 +40,17 @@ export function holidayName(iso: string): string | null { if (!iso) return null;
 /** "szombat" / "vasárnap" / "Nemzeti ünnep (okt. 23.)" – or null on a working day. */
 export function isWeekendOrHoliday(iso: string): string | null {
   if (!iso || iso.length < 10) return null;
+  if (dayOverride(iso) === "free") return null;
+  if (isLocked(iso)) return `lezárt nap (${shortDay(iso)})`;
   const h = holidayName(iso); if (h) return `${h} (${shortDay(iso)})`;
+  if (rotaActive()) return null; // with a work pattern the pattern decides, not the weekend
   const mv = MOVED_DAYS[iso.slice(0, 10)];
   if (mv === "work") return null;
   if (mv === "rest") return `áthelyezett pihenőnap (${shortDay(iso)})`;
   const dow = parseISODate(iso).getDay();
   return dow === 6 ? "szombat" : dow === 0 ? "vasárnap" : null;
 }
-export function prevWorkingDay(iso: string): string { let d = addDays(iso, -1); for (let i = 0; i < 14 && isWeekendOrHoliday(d); i++) d = addDays(d, -1); return d; }
+export function prevWorkingDay(iso: string): string { let d = addDays(iso, -1); for (let i = 0; i < 60 && isWeekendOrHoliday(d); i++) d = addDays(d, -1); return d; }
 const ONTO = ["vasárnapra", "hétfőre", "keddre", "szerdára", "csütörtökre", "péntekre", "szombatra"];
 const ON = ["vasárnap", "hétfőn", "kedden", "szerdán", "csütörtökön", "pénteken", "szombaton"];
 /** Human phrasing for moving a weekend/holiday date to the previous working day. */
@@ -55,7 +59,7 @@ export function workdayShift(iso: string): { onto: string; prev: string; prevOn:
   const h = holidayName(iso); const prev = prevWorkingDay(iso); const pd = parseISODate(prev).getDay();
   const far = Math.round((parseISODate(iso).getTime() - parseISODate(prev).getTime()) / 86400000) > 3;
   const mvRest = MOVED_DAYS[iso.slice(0, 10)] === "rest";
-  return { onto: h ? `ünnepnapra (${h}, ${shortDay(iso)})` : mvRest ? `áthelyezett pihenőnapra (${shortDay(iso)})` : ONTO[parseISODate(iso).getDay()], prev, prevOn: far ? `${ON[pd]} (${shortDay(prev)})` : ON[pd] };
+  return { onto: isLocked(iso) ? `lezárt napra (${shortDay(iso)})` : h ? `ünnepnapra (${h}, ${shortDay(iso)})` : mvRest ? `áthelyezett pihenőnapra (${shortDay(iso)})` : ONTO[parseISODate(iso).getDay()], prev, prevOn: far ? `${ON[pd]} (${shortDay(prev)})` : ON[pd] };
 }
 /** "2026. 12. 01., kedd" */
 export function fmtDateDay(iso: string | null | undefined): string { if (!iso) return ""; const d = parseISODate(iso); return `${fmtDate(iso)}, ${DAYS[d.getDay()].toLocaleLowerCase("hu-HU")}`; }
@@ -137,9 +141,9 @@ function Calendar({ value, min, max, onPick, quick, onClear, clearLabel }: { val
     <div className="dt-grid" role="grid" ref={ref} onKeyDown={onKey}>
       {grid.map(iso => {
         const d = parseISODate(iso); const dow = d.getDay(); const mv = MOVED_DAYS[iso]; const hol = holidayName(iso) || (mv === "rest" ? "Áthelyezett pihenőnap" : mv === "work" ? "Áthelyezett munkanap" : null); const dis = off(iso);
-        const cls = ["dt-day", iso.slice(0, 7) !== cur && "out", (dow === 0 || dow === 6) && mv !== "work" && "we", mv === "work" && "mvwork", (holidayName(iso) || mv === "rest") && "hol", iso === today && "today", iso === value && "sel"].filter(Boolean).join(" ");
+        const cls = ["dt-day", iso.slice(0, 7) !== cur && "out", (dow === 0 || dow === 6) && mv !== "work" && "we", mv === "work" && "mvwork", (holidayName(iso) || mv === "rest") && "hol", isLocked(iso) && "locked", iso === today && "today", iso === value && "sel"].filter(Boolean).join(" ");
         return <button key={iso} type="button" role="gridcell" data-iso={iso} className={cls} disabled={dis} tabIndex={iso === focus ? 0 : -1} aria-selected={iso === value}
-          aria-label={`${d.getFullYear()}. ${MONTHS[d.getMonth()]} ${d.getDate()}., ${DAYS[dow].toLocaleLowerCase("hu-HU")}${hol ? ` – ${hol}` : ""}${iso === today ? " (ma)" : ""}`} title={hol || undefined}
+          aria-label={`${d.getFullYear()}. ${MONTHS[d.getMonth()]} ${d.getDate()}., ${DAYS[dow].toLocaleLowerCase("hu-HU")}${hol ? ` – ${hol}` : ""}${isLocked(iso) ? " – lezárt nap" : ""}${iso === today ? " (ma)" : ""}`} title={hol || undefined}
           onClick={() => onPick(iso)}>{d.getDate()}</button>;
       })}
     </div>
@@ -162,7 +166,7 @@ export function DateField({ value, onChange, min, max, label = "Dátum", id, qui
   return <>
     <button ref={btn} type="button" id={id} className={`ctl dt-trigger ${mono ? "" : "sans"}`} aria-haspopup="dialog" aria-expanded={open} aria-label={`${label}: ${value ? fmtDateDay(value) : "nincs megadva"}`} onClick={() => setOpen(o => !o)}>
       <span className={value ? "v" : "ph"}>{value ? fmtDateDay(value) : placeholder}</span>
-      {value && (special || rel) && <span className={`dt-tag ${special ? "warn" : ""}`}>{special && holidayName(value) ? "ünnep" : special || rel}</span>}
+      {value && (special || rel) && <span className={`dt-tag ${special ? "warn" : ""}`}>{special && isLocked(value) ? "lezárt nap" : special && holidayName(value) ? "ünnep" : special || rel}</span>}
       <span className="dt-ico" aria-hidden>{Icon.calendar(18)}</span>
     </button>
     {open && <Overlay anchor={btn} onClose={close} title={label}>

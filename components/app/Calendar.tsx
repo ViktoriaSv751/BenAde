@@ -8,6 +8,7 @@ import { Empty, Icon, Seg, Skeleton, TypeIcon } from "@/components/ui";
 import { TaskRow } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
 import { TopBar, useShell, useUrlState } from "./Shell";
+import { isLocked, rotaActive, toggleDay } from "@/lib/rota";
 
 type Mode = "month" | "week" | "day";
 const TYPES: { v: TaskType | "all"; l: string }[] = [{ v: "all", l: "Mind" }, { v: "vu_download", l: "Fedélzeti" }, { v: "card_download", l: "Kártya" }, { v: "training", l: "Oktatás" }, { v: "invoice", l: "Számla" }, { v: "calibration", l: "Kalibráció" }, { v: "card_expiry", l: "Kártya lej." }];
@@ -36,7 +37,7 @@ export function CalendarView() {
       <div className="head">{["H", "K", "Sze", "Cs", "P", "Szo", "V"].map(d => <div key={d}>{d}</div>)}</div>
       <div className="grid">{grid.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; const out = dd.getMonth() !== cd.getMonth(); const max = layout === "phone" ? 0 : 3;
         const open = items.filter(x => x.status === "open").length; const heat = out ? 0 : open >= 6 ? 3 : open >= 3 ? 2 : open >= 1 ? 1 : 0; const wk = dd.getDay() === 0 || dd.getDay() === 6;
-        return <button key={d} data-heat={heat || undefined} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""} ${wk ? "wkend" : ""}`} aria-selected={cursor === d} onClick={() => setCursor(d)} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
+        return <button key={d} data-heat={heat || undefined} className={`cell ${out ? "out" : ""} ${d === t ? "today" : ""} ${wk ? "wkend" : ""} ${isLocked(d) ? "locked" : ""}`} aria-selected={cursor === d} onClick={() => setCursor(d)} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
           <span className="d">{dd.getDate()}</span>
           {max > 0 && items.slice(0, max).map(x => <span key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && x.due_at.slice(0, 10) < t ? "over" : ""}`} draggable onDragStart={e => { setDrag(x.id); e.stopPropagation(); }} onClick={e => { e.stopPropagation(); set({ t: x.id }); }}>{!x.all_day && <span className="tm">{timeOf(x.due_at)}</span>}<span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{subject(x).split(" · ").pop()}</span></span>)}
           {max > 0 && items.length > max && <span className="more">+{items.length - max} további</span>}
@@ -47,7 +48,7 @@ export function CalendarView() {
   const weekEl = (
     <div className="cal">
       <div className="head">{weekDays.map(d => { const dd = parseISODate(d); return <div key={d} style={{ color: d === t ? "var(--accent)" : undefined }}>{DAYS_SHORT[dd.getDay()]} <b className="mono">{dd.getDate()}</b></div>; })}</div>
-      <div className="grid">{weekDays.map(d => { const items = byDay.get(d) || []; return <div key={d} className={`cell ${d === t ? "today" : ""}`} style={{ minHeight: 220 }} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
+      <div className="grid">{weekDays.map(d => { const items = byDay.get(d) || []; return <div key={d} className={`cell ${d === t ? "today" : ""} ${isLocked(d) ? "locked" : ""}`} style={{ minHeight: 220 }} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
         {items.length === 0 && <span style={{ color: "var(--faint)", fontSize: 12 }}>–</span>}
         {items.map(x => <button key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && d < t ? "over" : ""}`} style={{ whiteSpace: "normal", textAlign: "left", alignItems: "flex-start", flexDirection: "column", gap: 1, padding: "5px 7px" }} draggable onDragStart={() => setDrag(x.id)} onClick={() => set({ t: x.id })}><span className="tm">{x.all_day ? "egész nap" : timeOf(x.due_at)} · {TASK_META[x.type].short}</span>{parts(x).map((p, i) => <span key={i}>{p}</span>)}</button>)}
       </div>; })}</div>
@@ -59,7 +60,7 @@ export function CalendarView() {
 
   const shortTitle = mode === "month" ? `${cd.getFullYear()}. ${MONTHS[cd.getMonth()]}` : mode === "week" ? `${MONTHS[parseISODate(weekDays[0]).getMonth()].slice(0, 3)}. ${parseISODate(weekDays[0]).getDate()}–${parseISODate(weekDays[6]).getDate()}. · ${isoWeek(cursor)}. hét` : fmtLong(cd);
   const phoneWeek = (
-    <div className="weekstrip cal-week">{weekDays.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; return <button key={d} aria-pressed={cursor === d} className={d === t ? "today" : ""} onClick={() => setCursor(d)}><span>{DAYS_SHORT[dd.getDay()]}</span><b>{dd.getDate()}</b><span className="dots">{items.slice(0, 3).map(x => <i key={x.id} className={TASK_META[x.type].cls} />)}</span></button>; })}</div>
+    <div className="weekstrip cal-week">{weekDays.map(d => { const dd = parseISODate(d); const items = byDay.get(d) || []; return <button key={d} aria-pressed={cursor === d} className={`${d === t ? "today" : ""} ${isLocked(d) ? "locked" : ""}`} onClick={() => setCursor(d)}><span>{DAYS_SHORT[dd.getDay()]}</span><b>{dd.getDate()}</b><span className="dots">{items.slice(0, 3).map(x => <i key={x.id} className={TASK_META[x.type].cls} />)}</span></button>; })}</div>
   );
   const filters = (
     <div className={layout === "phone" ? "filterrow" : "chips"} style={layout === "phone" ? undefined : { flex: 1 }}>
@@ -81,6 +82,7 @@ export function CalendarView() {
       {mode === "month" && monthGridEl}
       {mode === "week" && phoneWeek}
       <div className="sec" style={{ marginTop: mode === "day" ? 4 : 14 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>
+      <DayLock day={cursor} />
       {dayEl}
     </div>
   ) : (
@@ -93,13 +95,28 @@ export function CalendarView() {
         <Seg value={mode} onChange={setMode} options={[{ value: "month", label: "Hónap" }, { value: "week", label: "Hét" }, { value: "day", label: "Nap" }]} />
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>{filters}</div>
-      {mode === "month" ? monthGridEl : mode === "week" ? weekEl : <><div className="sec" style={{ marginTop: 4 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>{dayEl}</>}
+      {mode === "month" ? monthGridEl : mode === "week" ? weekEl : <><div className="sec" style={{ marginTop: 4 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div><DayLock day={cursor} />{dayEl}</>}
       <div className="info">{Icon.info()}<span>Húzással áthelyezheti a tételeket másik napra (az emlékeztetők is eltolódnak). A jogi határidőt a lezáráskor számolt ciklus adja – azt a tétel részleteiben lehet felülírni.</span></div>
     </div>
   );
   const detail = sel ? data.tasks.find(x => x.id === sel) : undefined;
   return <>
     <TopBar title="Naptár" sub={layout === "desktop" ? `${tasks.filter(x => x.status === "open").length} nyitott tétel` : undefined} actions={layout !== "phone" ? <button className="btn primary sm" onClick={() => openCapture()}>{Icon.plus(16)} Új</button> : undefined} />
-    {layout === "phone" ? main : <div className="split wide"><div className="pane">{main}</div><div className="pane detail">{detail ? <div className="inner"><TaskDetail t={detail} onDone={() => set({ t: null })} /></div> : <div className="inner"><div className="sec" style={{ marginTop: 0 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div><div style={{ marginTop: 10 }}>{dayEl}</div></div>}</div></div>}
+    {layout === "phone" ? main : <div className="split wide"><div className="pane">{main}</div><div className="pane detail">{detail ? <div className="inner"><TaskDetail t={detail} onDone={() => set({ t: null })} /></div> : <div className="inner"><div className="sec" style={{ marginTop: 0 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div><div style={{ marginTop: 10 }}><DayLock day={cursor} />{dayEl}</div></div>}</div></div>}
   </>;
+}
+
+/** Locked-day bar under the selected day: shows why it is locked, and lets the owner lock / free it. */
+function DayLock({ day }: { day: string }) {
+  const data = useData(); const { role } = useShell(); const mutate = useMutate();
+  if (!data) return null;
+  const def = data.workspace.defaults; const locked = isLocked(day, def); const canEdit = role === "owner"; const manual = def.dayOverrides?.[day];
+  if (!locked && !canEdit) return null;
+  const flip = () => mutate(async r => { await r.workspace.update({ defaults: { ...def, dayOverrides: toggleDay(def, day, todayISO()) } }); return r.workspace.reapplyLocks(); }, { success: locked ? "Nap feloldva" : "Nap lezárva – erre a napra nem küldünk emlékeztetőt" });
+  const why = manual === "lock" ? "kézzel lezárva" : rotaActive(def.workRota) ? "munkarend szerint" : "";
+  return <div className={`daylock ${locked ? "on" : ""}`}>
+    <span className="ic">{locked ? Icon.lock(18) : Icon.unlock(18)}</span>
+    <span className="tx">{locked ? <><b>Lezárt nap</b>{why && <small>{why} · az emlékeztetők előtte jönnek</small>}</> : <><b>Munkanap</b>{manual === "free" ? <small>kézzel feloldva</small> : <small>lezárhatja, ha nem ér rá</small>}</>}</span>
+    {canEdit && <button type="button" className="btn sm secondary" onClick={flip}>{locked ? "Feloldás" : "Lezárás"}</button>}
+  </div>;
 }

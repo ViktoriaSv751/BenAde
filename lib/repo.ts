@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Activity, Company, Contact, Driver, Invite, Membership, Notification, Profile, Role, Schedule, SearchHit, Snapshot, Task, TaskType, Vehicle, Workspace, WorkspaceDefaults } from "./types";
 import { TASK_META } from "./types";
 import { addDays, dateOf, isoDate, reminderTimes, toTS, todayISO } from "./date";
+import { setDayRules, shiftLocked } from "./rota";
 
 export type NewTask = Omit<Task, "id" | "workspace_id" | "status" | "created_at" | "updated_at" | "done_at" | "done_by" | "created_by">;
 
@@ -25,7 +26,7 @@ export interface Repo {
     snooze(id: string, days: number): Promise<void>;
   };
   notification: { markOpened(id: string): Promise<void>; markAllOpened(): Promise<void> };
-  workspace: { update(p: Partial<Workspace>): Promise<void>; invite(email: string, role: Role): Promise<Invite>; revokeInvite(id: string): Promise<void>; removeMember(userId: string): Promise<void>; setRole(userId: string, role: Role): Promise<void> };
+  workspace: { update(p: Partial<Workspace>): Promise<void>; invite(email: string, role: Role): Promise<Invite>; revokeInvite(id: string): Promise<void>; removeMember(userId: string): Promise<void>; setRole(userId: string, role: Role): Promise<void>; /** Munkarend changed: move open tasks' future reminders off locked days. */ reapplyLocks(): Promise<number> };
   profile: { update(p: Partial<Profile>): Promise<void> };
   search(q: string): Promise<SearchHit[]>;
   activity(limit?: number, entityId?: string): Promise<Activity[]>;
@@ -124,6 +125,7 @@ export class SupabaseRepo implements Repo {
   };
   workspace = {
     update: (p: Partial<Workspace>) => this.upd("workspaces", this.wsId, p),
+    reapplyLocks: async () => { const { data, error } = await this.sb.rpc("reapply_locked_days", { p_ws: this.wsId }); if (error) throw error; return (data as number) || 0; },
     invite: async (email: string, role: Role) => { const inv = await this.ins<Invite>("invites", { email: email.trim().toLowerCase(), role, created_by: this.userId }); fetch("/api/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: inv.id }) }).catch(() => {}); return inv; },
     revokeInvite: (id: string) => this.del("invites", id),
     removeMember: async (userId: string) => { const { error } = await this.sb.from("memberships").delete().eq("workspace_id", this.wsId).eq("user_id", userId); if (error) throw error; },
@@ -211,6 +213,7 @@ export class DemoRepo implements Repo {
   };
   workspace = {
     update: async (p: Partial<Workspace>) => { Object.assign(this.s.workspace, p); this.save(); },
+    reapplyLocks: async () => { setDayRules(this.s.workspace.defaults); let n = 0; for (const t of this.s.tasks) { if (t.status !== "open") continue; const r = shiftLocked(t.remind_at); if (r.join() !== t.remind_at.join()) { t.remind_at = r; this.scheduleNotifs(t); n++; } } this.save(); return n; },
     invite: async (email: string, role: Role) => { const inv: Invite = { id: uid(), workspace_id: this.s.workspace.id, email, role, token: uid(), created_at: nowIso() }; this.s.invites.push(inv); this.save(); return inv; },
     revokeInvite: async (id: string) => { this.s.invites = this.s.invites.filter(i => i.id !== id); this.save(); },
     removeMember: async (userId: string) => { this.s.members = this.s.members.filter(m => m.user_id !== userId); this.save(); },

@@ -7,6 +7,7 @@ import { companyName, fmtFt, plateFmt, titleCase } from "@/lib/format";
 import { computeDue, defaultReminders, type NewTask } from "@/lib/repo";
 import { useData, useMutate } from "@/lib/data";
 import { Field, Icon, Panel, Switch, TypeIcon, useConfirm } from "@/components/ui";
+import { shiftLocked } from "@/lib/rota";
 import { DateField, TimeField, fmtDateDay, isWeekendOrHoliday, prevWorkingDay, workdayShift } from "@/components/DateTime";
 import { useShell, useUrlState } from "./Shell";
 
@@ -270,13 +271,15 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
   const future = (ts: string) => new Date(ts).getTime() > Date.now() - 60_000;
   const dueShifted = f.dueRemShift && !!isWeekendOrHoliday(f.dueDate);
   const dueRemDate = dueShifted ? prevWorkingDay(f.dueDate) : f.dueDate;
-  const reminders = useMemo(() => {
+  const rawReminders = useMemo(() => {
     if (quick) { const a = toTS(f.qRemDate, f.qRemTime); const b = toTS(dueRemDate, f.remTime); return [...new Set([a, b])].filter(future).sort(); }
     if (f.useCustom) return f.customRem.filter(r => r.d && r.t).map(r => toTS(r.d, r.t)).filter(ts => edit ? true : future(ts)).sort();
     if (type === "training") return defaultReminders(f.dueDate, d, "training");
     if (type === "invoice") return [toTS(dueRemDate, f.remTime)].filter(future);
     return f.remDays.map(n => toTS(addDays(f.dueDate, -n), f.remTime)).filter(future).sort();
   }, [quick, f.qRemDate, f.qRemTime, dueRemDate, f.remTime, f.useCustom, f.customRem, type, f.dueDate, d, f.remDays, edit]); // eslint-disable-line react-hooks/exhaustive-deps
+  // reminders on a locked day (Munkarend) go to the free day before – the database does the same
+  const reminders = useMemo(() => shiftLocked(rawReminders), [rawReminders]);
 
   async function addSubject(raw = newSub): Promise<string | null> {
     const q = raw.trim(); if (!q || !f.companyId) return null; setErr(null);

@@ -42,6 +42,7 @@
 .dt-day.we { color: var(--muted); }
 .dt-day.out { color: var(--faint); opacity: .55; }
 .dt-day.hol { color: var(--danger-fg); }
+.dt-day.locked { color: var(--faint); background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--fg) 7%, transparent) 5px 7px); text-decoration: line-through; }
 .dt-day.hol::after { content: ""; position: absolute; bottom: 6px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--danger); }
 .dt-day.today { box-shadow: inset 0 0 0 2px var(--accent); }
 .dt-day.sel { background: var(--accent); color: var(--accent-ink); box-shadow: none; }

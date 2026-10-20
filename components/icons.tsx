@@ -44,6 +44,8 @@ export const Icon = {
   file: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5M10 13h6M10 17h6" /></svg>,
   list: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" /></svg>,
   grid: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>,
+  lock: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>,
+  unlock: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 7.6-1.7" /></svg>,
   shield: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>,
   history: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5M12 8v4l3 2" /></svg>,
   warn: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" {...P}><path d="M12 3l10 18H2z" /><path d="M12 10v4M12 17.5h.01" /></svg>,

@@ -5,7 +5,12 @@ export type TaskStatus = "open" | "done" | "skipped";
 export interface WorkspaceDefaults {
   vuDays: number; cardDays: number; calibrationDays: number; cardExpiryDays: number; invoiceDays: number;
   remindDaysBefore: number[]; remindTime: string; trainingTimes: string[]; quietFrom: string; quietTo: string; vatPercent: number;
+  /** Munkarend: `on` work days from `start`, then `off` locked days, repeating. */
+  workRota?: WorkRota | null;
+  /** Manual changes to single days: "lock" = locked, "free" = open even if the pattern locks it. */
+  dayOverrides?: Record<string, "lock" | "free">;
 }
+export interface WorkRota { enabled: boolean; start: string; on: number; off: number; }
 export interface Workspace {
   id: string; name: string; phone?: string | null; email?: string | null; address?: string | null; tax_id?: string | null;
   logo_path?: string | null; timezone: string; defaults: WorkspaceDefaults; ics_token: string; created_by?: string | null; created_at: string;
@@ -39,7 +44,7 @@ export interface Snapshot {
   notifications: Notification[]; members: Membership[]; invites: Invite[];
 }
 
-export const TASK_META: Record<TaskType, { name: string; short: string; cls: string; cycleKey?: keyof WorkspaceDefaults; subject: "vehicle" | "driver" | "none" }> = {
+export const TASK_META: Record<TaskType, { name: string; short: string; cls: string; cycleKey?: "vuDays" | "cardDays" | "calibrationDays" | "cardExpiryDays"; subject: "vehicle" | "driver" | "none" }> = {
   vu_download: { name: "Fedélzeti egység letöltés", short: "Fedélzeti egység", cls: "t-vu", cycleKey: "vuDays", subject: "vehicle" },
   card_download: { name: "Vezetői kártya letöltés", short: "Vezetői kártya", cls: "t-card", cycleKey: "cardDays", subject: "driver" },
   calibration: { name: "Tachográf kalibráció", short: "Kalibráció", cls: "t-cal", cycleKey: "calibrationDays", subject: "vehicle" },

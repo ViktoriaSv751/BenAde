@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLayout, type Layout } from "@/lib/layout";
 import { useData, useMutate, useOnline, useSnapshot, useTheme, useToast } from "@/lib/data";
 import { SplashScreen, hideSplash } from "@/components/Splash";
+import { setDayRules } from "@/lib/rota";
 import { Icon } from "@/components/ui";
 import { todayISO } from "@/lib/date";
 import type { Role } from "@/lib/types";
@@ -50,6 +51,7 @@ const SIDE = [
 export function Shell({ children, email, name, demo, signOut }: { children: React.ReactNode; email: string; name: string; demo: boolean; signOut: () => void }) {
   const { layout, touch } = useLayout(); const path = usePathname(); const { get, set } = useUrlState();
   const snap = useSnapshot(); const data = snap.data; const [search, setSearch] = useState(false);
+  setDayRules(data?.workspace.defaults); // Munkarend: the date helpers read the locked days from here
   // brand screen until the first data is in, then the app fades in from it (no skeleton flash after login)
   const ready = !!data || snap.isError; const [boot, setBoot] = useState<"on" | "leaving" | "off">("on");
   useEffect(() => { if (!ready) return; hideSplash(); setBoot(b => b === "on" ? "leaving" : b); }, [ready]);
