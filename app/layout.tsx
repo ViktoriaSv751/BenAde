@@ -1,4 +1,5 @@
 import VersionWatch from "@/components/VersionWatch";
+import { SplashHost } from "@/components/Splash";
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/jetbrains-mono";
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="hu" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
-      <body>{children}<VersionWatch /></body>
+      <body>{children}<SplashHost /><VersionWatch /></body>
     </html>
   );
 }

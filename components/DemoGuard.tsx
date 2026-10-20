@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { SplashScreen } from "./Splash";
 
 const KEY = "benade.demo.ok";
 /** Called from the "Belépés tesztfiókkal" button – the only way into the test account. */
@@ -13,5 +14,5 @@ export default function DemoGuard({ children }: { children: React.ReactNode }) {
     let pass = false; try { pass = sessionStorage.getItem(KEY) === "1"; } catch { pass = true; }
     if (pass) setOk(true); else window.location.replace("/login");
   }, []);
-  return ok ? <>{children}</> : <div style={{ minHeight: "100dvh", background: "var(--bg, #000)" }} />;
+  return ok ? <>{children}</> : <SplashScreen />;
 }

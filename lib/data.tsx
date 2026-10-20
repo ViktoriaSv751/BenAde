@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Repo } from "./repo";
 import type { Snapshot, Task } from "./types";
-import { taskSubject } from "./repo";
+import { taskSubject, taskSubjectParts } from "./repo";
 
 const RepoCtx = createContext<Repo | null>(null);
 export const useRepo = () => { const r = useContext(RepoCtx); if (!r) throw new Error("no repo"); return r; };
@@ -66,6 +66,7 @@ export const openTasks = (s: Snapshot) => s.tasks.filter(t => t.status === "open
 export const isDone = (t: Task) => t.status !== "open";
 export const subjectOf = (s: Snapshot, t: Task) => taskSubject(s, t);
 export function useSubject() { const s = useData(); return useCallback((t: Task) => (s ? taskSubject(s, t) : ""), [s]); }
+export function useSubjectParts() { const s = useData(); return useCallback((t: Task) => (s ? taskSubjectParts(s, t) : []), [s]); }
 
 /* ---------- toasts ---------- */
 type Toast = { id: number; msg: string; kind: "ok" | "err" | ""; action?: { label: string; fn: () => void } };

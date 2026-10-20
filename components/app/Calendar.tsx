@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import type { Task, TaskType } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
 import { DAYS_SHORT, MONTHS, addDays, addMonths, dayDiff, fmtLong, isoWeek, monthGrid, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
-import { useData, useMutate, useSubject } from "@/lib/data";
+import { useData, useMutate, useSubject, useSubjectParts } from "@/lib/data";
 import { Empty, Icon, Seg, Skeleton, TypeIcon } from "@/components/ui";
 import { TaskRow } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
@@ -13,7 +13,7 @@ type Mode = "month" | "week" | "day";
 const TYPES: { v: TaskType | "all"; l: string }[] = [{ v: "all", l: "Mind" }, { v: "vu_download", l: "Fedélzeti" }, { v: "card_download", l: "Kártya" }, { v: "training", l: "Oktatás" }, { v: "invoice", l: "Számla" }, { v: "calibration", l: "Kalibráció" }, { v: "card_expiry", l: "Kártya lej." }];
 
 export function CalendarView() {
-  const data = useData(); const { layout, openCapture } = useShell(); const { get, set } = useUrlState(); const subject = useSubject(); const mutate = useMutate();
+  const data = useData(); const { layout, openCapture } = useShell(); const { get, set } = useUrlState(); const subject = useSubject(); const parts = useSubjectParts(); const mutate = useMutate();
   const t = todayISO();
   const [cursor, setCursor] = useState(get("d") || t); const [mode, setMode] = useState<Mode>(layout === "phone" ? "week" : "month");
   const [type, setType] = useState<TaskType | "all">("all"); const [cid, setCid] = useState(""); const [showDone, setShowDone] = useState(false);
@@ -49,7 +49,7 @@ export function CalendarView() {
       <div className="head">{weekDays.map(d => { const dd = parseISODate(d); return <div key={d} style={{ color: d === t ? "var(--accent)" : undefined }}>{DAYS_SHORT[dd.getDay()]} <b className="mono">{dd.getDate()}</b></div>; })}</div>
       <div className="grid">{weekDays.map(d => { const items = byDay.get(d) || []; return <div key={d} className={`cell ${d === t ? "today" : ""}`} style={{ minHeight: 220 }} onDragOver={e => { if (drag) e.preventDefault(); }} onDrop={() => onDrop(d)}>
         {items.length === 0 && <span style={{ color: "var(--faint)", fontSize: 12 }}>–</span>}
-        {items.map(x => <button key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && d < t ? "over" : ""}`} style={{ whiteSpace: "normal", textAlign: "left", alignItems: "flex-start", flexDirection: "column", gap: 1, padding: "5px 7px" }} draggable onDragStart={() => setDrag(x.id)} onClick={() => set({ t: x.id })}><span className="tm">{x.all_day ? "egész nap" : timeOf(x.due_at)} · {TASK_META[x.type].short}</span><span>{subject(x)}</span></button>)}
+        {items.map(x => <button key={x.id} className={`ev ${TASK_META[x.type].cls} ${x.status === "open" && d < t ? "over" : ""}`} style={{ whiteSpace: "normal", textAlign: "left", alignItems: "flex-start", flexDirection: "column", gap: 1, padding: "5px 7px" }} draggable onDragStart={() => setDrag(x.id)} onClick={() => set({ t: x.id })}><span className="tm">{x.all_day ? "egész nap" : timeOf(x.due_at)} · {TASK_META[x.type].short}</span>{parts(x).map((p, i) => <span key={i}>{p}</span>)}</button>)}
       </div>; })}</div>
     </div>
   );

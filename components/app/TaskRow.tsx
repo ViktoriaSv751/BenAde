@@ -4,7 +4,7 @@ import type { Task } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
 import { fmtDate, relLabel, timeOf, todayISO } from "@/lib/date";
 import { phoneHref } from "@/lib/format";
-import { useData, useMutate, useSubject, useToast } from "@/lib/data";
+import { useData, useMutate, useSubject, useSubjectParts, useToast } from "@/lib/data";
 import { ActionSheet, Icon, TypeIcon } from "@/components/ui";
 import { useShell } from "./Shell";
 
@@ -21,7 +21,7 @@ export function TaskRow({ t, selected, compact, onOpen, selectMode, checked, onT
   t: Task; selected?: boolean; compact?: boolean; onOpen?: () => void; swipe?: boolean;
   selectMode?: boolean; checked?: boolean; onToggle?: () => void; onLongPress?: () => void; actions?: boolean;
 }) {
-  const data = useData(); const subject = useSubject(); const meta = TASK_META[t.type]; const rel = relLabel(t.due_at); const done = t.status !== "open";
+  const data = useData(); const subject = useSubject(); const parts = useSubjectParts(); const meta = TASK_META[t.type]; const rel = relLabel(t.due_at); const done = t.status !== "open";
   const { openTask } = useShell(); const mutate = useMutate(); const toast = useToast();
   const [leaving, setLeaving] = useState(false); const [menu, setMenu] = useState(false);
   const press = useRef<ReturnType<typeof setTimeout> | null>(null); const long = useRef(false);
@@ -51,7 +51,7 @@ export function TaskRow({ t, selected, compact, onOpen, selectMode, checked, onT
       <span className="body">
         <span className="when"><span>{fmtDate(t.due_at)}</span>{!t.all_day && <span className="t">{timeOf(t.due_at)}</span>}{done ? <span className="st ok">{t.type === "invoice" ? "Kifizetve" : "Kész"}</span> : <span className={`st ${rel.tone}`}>{rel.text}</span>}</span>
         <span className="name">{meta.name}</span>
-        <span className="meta">{subject(t)}</span>
+        <span className="meta">{parts(t).map((p, i) => <span key={i} className={i ? "ln" : "ln co"}>{p}</span>)}</span>
         {t.note && !compact && <span className="note">Megj.: {t.note}</span>}
         {t.type === "invoice" && !done && !compact && <span className="unpaid">Nincs kifizetve</span>}
       </span>

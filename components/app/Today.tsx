@@ -5,7 +5,7 @@ import type { Task } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
 import { DAYS_SHORT, addDays, dayDiff, fmtDate, fmtLong, nowHM, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
 import { fmtFt, initials, phoneHref } from "@/lib/format";
-import { useData, useMutate, useSubject, useToast } from "@/lib/data";
+import { useData, useMutate, useSubject, useSubjectParts, useToast } from "@/lib/data";
 import { Chips, CountUp, Empty, Icon, PagedList, Ring, Skeleton } from "@/components/ui";
 import { TaskRow, haptic } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
@@ -16,7 +16,7 @@ type Filter = "open" | "over" | "today" | "week" | "done";
 
 export function TodayView() {
   const data = useData(); const { layout, openCapture, demo } = useShell(); const { get, set } = useUrlState();
-  const subject = useSubject(); const mutate = useMutate(); const toast = useToast();
+  const subject = useSubject(); const parts = useSubjectParts(); const mutate = useMutate(); const toast = useToast();
   const [filter, setFilter] = useState<Filter>("open"); const [day, setDay] = useState<string | null>(null);
   const [sel, setSel] = useState<Set<string> | null>(null); const [closed, setClosed] = useState<Set<string>>(new Set());
   const t = todayISO(); const selId = get("t");
@@ -66,7 +66,8 @@ export function TodayView() {
             <span className="k">Következő teendő</span>
             <span className="when" style={{ display: "block" }}>{(() => { const d = dayDiff(next.due_at); return d < 0 ? <><em>{-d} napja</em> lejárt</> : d === 0 ? <>Ma {!next.all_day && <em>{timeOf(next.due_at)}</em>}</> : d === 1 ? <>Holnap {!next.all_day && <em>{timeOf(next.due_at)}</em>}</> : <><em>{d}</em> nap múlva</>; })()}</span>
             <span className="t" style={{ display: "block" }}>{TASK_META[next.type].name}</span>
-            <span className="m" style={{ display: "block" }}>{subject(next)} · {fmtDate(next.due_at)}</span>
+            {parts(next).map((p, i) => <span key={i} className="m" style={{ display: "block" }}>{p}</span>)}
+            <span className="m" style={{ display: "block" }}>{fmtDate(next.due_at)}</span>
             <span className="acts"><span className="btn ok sm" role="button" tabIndex={0} onClick={e => { e.stopPropagation(); complete(next); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); complete(next); } }}>{Icon.check(16)} {next.type === "invoice" ? "Kifizetve" : "Elvégezve"}</span><span className="btn secondary sm">Megnyitás</span></span>
           </span>
           <Ring pct={ringPct(next)} size={72} tone={dayDiff(next.due_at) < 0 ? "over" : undefined} cls={TASK_META[next.type].cls}><div style={{ textAlign: "center" }}><div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{dayDiff(next.due_at) < 0 ? "!" : Math.abs(dayDiff(next.due_at))}</div><div style={{ fontSize: 9, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 800 }}>{dayDiff(next.due_at) < 0 ? "lejárt" : "nap"}</div></div></Ring>

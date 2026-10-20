@@ -3,7 +3,8 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLayout, type Layout } from "@/lib/layout";
-import { useData, useMutate, useOnline, useTheme, useToast } from "@/lib/data";
+import { useData, useMutate, useOnline, useSnapshot, useTheme, useToast } from "@/lib/data";
+import { SplashScreen, hideSplash } from "@/components/Splash";
 import { Icon } from "@/components/ui";
 import { todayISO } from "@/lib/date";
 import type { Role } from "@/lib/types";
@@ -48,7 +49,11 @@ const SIDE = [
 
 export function Shell({ children, email, name, demo, signOut }: { children: React.ReactNode; email: string; name: string; demo: boolean; signOut: () => void }) {
   const { layout, touch } = useLayout(); const path = usePathname(); const { get, set } = useUrlState();
-  const data = useData(); const [search, setSearch] = useState(false);
+  const snap = useSnapshot(); const data = snap.data; const [search, setSearch] = useState(false);
+  // brand screen until the first data is in, then the app fades in from it (no skeleton flash after login)
+  const ready = !!data || snap.isError; const [boot, setBoot] = useState<"on" | "leaving" | "off">("on");
+  useEffect(() => { if (!ready) return; hideSplash(); setBoot(b => b === "on" ? "leaving" : b); }, [ready]);
+  useEffect(() => { if (boot !== "leaving") return; const t = setTimeout(() => setBoot("off"), 380); return () => clearTimeout(t); }, [boot]);
   const base = demo ? "/demo" : "/app";
   const openCapture = useCallback((type?: string, prefill?: Record<string, string>) => set({ uj: type || "menu", ...(prefill || {}) }), [set]);
   const openTask = useCallback((id: string) => set({ t: id }), [set]);
@@ -140,6 +145,7 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
         <CapturePanel open={!!get("uj")} type={get("uj") || undefined} onClose={() => set({ uj: null, cid: null, vid: null, did: null, edit: null })} />
         <TaskDetailPanel id={get("t")} onClose={() => set({ t: null })} />
         <SearchPalette open={search} onClose={() => setSearch(false)} />
+        {boot !== "off" && <SplashScreen leaving={boot === "leaving"} />}
       </div>
     </Ctx.Provider>
   );

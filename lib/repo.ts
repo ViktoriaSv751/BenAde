@@ -231,6 +231,15 @@ export class DemoRepo implements Repo {
 
 /* ---------------- shared ---------------- */
 export function companyNameOf(s: Snapshot, id: string) { return s.companies.find(c => c.id === id)?.name || "Ismeretlen cég"; }
+/** The same pieces as taskSubject, one per line: company, then plate / driver / invoice no. / amount / address. */
+export function taskSubjectParts(s: Snapshot, t: Task): string[] {
+  const out = [companyNameOf(s, t.company_id)];
+  if (t.type === "invoice") { if (t.invoice_no) out.push(t.invoice_no); if (t.gross_amount != null) out.push(Number(t.gross_amount).toLocaleString("hu-HU") + " Ft"); }
+  else if (t.type === "training") { if (t.address) out.push(t.address); }
+  else if (t.driver_id) { const n = s.drivers.find(d => d.id === t.driver_id)?.name; if (n) out.push(n); }
+  else if (t.vehicle_id) { const p = s.vehicles.find(v => v.id === t.vehicle_id)?.plate; if (p) out.push(p); }
+  return out;
+}
 export function taskSubject(s: Snapshot, t: Task): string {
   const c = companyNameOf(s, t.company_id);
   let sub = "";

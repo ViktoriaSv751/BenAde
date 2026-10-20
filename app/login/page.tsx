@@ -7,6 +7,7 @@ import SocialAuth from "@/components/SocialAuth";
 import PasswordInput from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 import { authMessage } from "@/lib/auth-errors";
+import { showSplash } from "@/components/Splash";
 
 /** E-mail + jelszó belépés (ideiglenes, amíg az Apple/Google-belépés nincs bekapcsolva). */
 function EmailFallback({ next }: { next: string }) {
@@ -15,8 +16,8 @@ function EmailFallback({ next }: { next: string }) {
     e.preventDefault(); setErr(null); setBusy(true);
     const fd = new FormData(e.currentTarget);
     const { error } = await createClient().auth.signInWithPassword({ email: String(fd.get("email")).trim(), password: String(fd.get("password")) });
-    setBusy(false);
-    if (error) { setErr(authMessage(error.message)); return; }
+    if (error) { setBusy(false); setErr(authMessage(error.message)); return; }
+    showSplash(); // stays until the app has its data, then the Teendő page fades in from it
     router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/app"); router.refresh();
   }
   return (
