@@ -1,20 +1,28 @@
--- Munkarend: lezárt napok (ismétlődő minta + kézi lezárás / feloldás) a workspaces.defaults-ban.
---   defaults.workRota     = { "enabled": true, "start": "2026-10-21", "on": 1, "off": 3 }  → 1 munkanap, utána 3 lezárt nap, ismétlődve
+-- Munkarend: a lezárt napok azok, amikor a felhasználó máshol dolgozik (ismétlődő minta + kézi bejelölés / feloldás), workspaces.defaults.
+--   defaults.workRota     = { "enabled": true, "start": "2026-10-20", "work": 1, "free": 3 } → okt. 20. munkanap (lezárva), 3 szabad nap,
+--                           okt. 24. újra munkanap, ismétlődve. (Régi alak: { "on": n, "off": m } = n szabad, m lezárt nap.)
 --   defaults.dayOverrides = { "2026-10-25": "lock" | "free" }                            → kézi eltérés a mintától
 -- Lezárt napra eső emlékeztető automatikusan az előtte lévő utolsó munkanapra kerül (ugyanarra az órára).
 -- tasks.remind_plan őrzi az eredeti időpontokat, így ha egy napot később feloldanak, az emlékeztető visszakerül.
 
 create or replace function public.is_locked_day(def jsonb, d date) returns boolean language plpgsql immutable as $$
-declare ov text; r jsonb; st date; n_on int; n_off int; n int;
+declare ov text; r jsonb; st date; a int; b int; n int; k int;
 begin
   ov := def->'dayOverrides'->>to_char(d, 'YYYY-MM-DD');
   if ov = 'lock' then return true; elsif ov = 'free' then return false; end if;
   r := def->'workRota';
   if r is null or jsonb_typeof(r) <> 'object' or coalesce((r->>'enabled')::boolean, false) = false then return false; end if;
-  st := (r->>'start')::date; n_on := coalesce((r->>'on')::int, 0); n_off := coalesce((r->>'off')::int, 0);
-  if st is null or n_on < 1 or n_off < 1 then return false; end if;
-  n := n_on + n_off;
-  return ((((d - st) % n) + n) % n) >= n_on;
+  st := (r->>'start')::date; if st is null then return false; end if;
+  if r ? 'work' then
+    -- from the first work day on: `work` locked (busy) days, then `free` open days, repeating
+    a := coalesce((r->>'work')::int, 0); b := coalesce((r->>'free')::int, 0);
+    if a < 1 or b < 1 or d < st then return false; end if;
+    n := a + b; k := (d - st) % n; return k < a;
+  end if;
+  -- legacy shape: `on` open days, then `off` locked days
+  a := coalesce((r->>'on')::int, 0); b := coalesce((r->>'off')::int, 0);
+  if a < 1 or b < 1 then return false; end if;
+  n := a + b; return ((((d - st) % n) + n) % n) >= a;
 end $$;
 
 alter table public.tasks add column if not exists remind_plan timestamptz[];

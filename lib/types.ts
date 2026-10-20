@@ -5,12 +5,13 @@ export type TaskStatus = "open" | "done" | "skipped";
 export interface WorkspaceDefaults {
   vuDays: number; cardDays: number; calibrationDays: number; cardExpiryDays: number; invoiceDays: number;
   remindDaysBefore: number[]; remindTime: string; trainingTimes: string[]; quietFrom: string; quietTo: string; vatPercent: number;
-  /** Munkarend: `on` work days from `start`, then `off` locked days, repeating. */
+  /** Munkarend: from `start` (a work day) `work` locked days, then `free` open days, repeating. */
   workRota?: WorkRota | null;
   /** Manual changes to single days: "lock" = locked, "free" = open even if the pattern locks it. */
   dayOverrides?: Record<string, "lock" | "free">;
 }
-export interface WorkRota { enabled: boolean; start: string; on: number; off: number; }
+export interface WorkRota { enabled: boolean; start: string; work?: number; free?: number;
+  /** legacy shape (first version): `on` open days from `start`, then `off` locked days */ on?: number; off?: number; }
 export interface Workspace {
   id: string; name: string; phone?: string | null; email?: string | null; address?: string | null; tax_id?: string | null;
   logo_path?: string | null; timezone: string; defaults: WorkspaceDefaults; ics_token: string; created_by?: string | null; created_at: string;
