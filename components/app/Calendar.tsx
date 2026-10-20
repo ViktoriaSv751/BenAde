@@ -111,7 +111,6 @@ export function CalendarView() {
   </>;
 }
 
-const LAST_N = "benade.lockN";
 /** Locked-day bar under the selected day: shows why it is locked; the owner can lock it, or mark it as a work day and lock
  *  the next few days in one go ("ezen a napon dolgozom, utána 3 nap lezárva"), and free a day or the whole locked run. */
 function DayLock({ day }: { day: string }) {
@@ -121,15 +120,14 @@ function DayLock({ day }: { day: string }) {
   if (!locked && !canEdit) return null;
   const save = (days: string[], lock: boolean, msg: string) => mutate(async r => { await r.workspace.update({ defaults: { ...def, dayOverrides: setDays(def, days, lock, todayISO()) } }); return r.workspace.reapplyLocks(); }, { success: msg });
   const range = (from: string, n: number) => Array.from({ length: n }, (_, k) => addDays(from, k));
-  const span = (days: string[]) => days.length === 1 ? shortDay(days[0]) : `${shortDay(days[0])} – ${shortDay(days[days.length - 1])}`;
-  let last = 3; try { last = Number(localStorage.getItem(LAST_N)) || 3; } catch { /* ignore */ }
+  const span = (days: string[]) => { const a = days[0], b = days[days.length - 1]; return days.length === 1 ? shortDay(a) : a.slice(0, 7) === b.slice(0, 7) ? `${shortDay(a).slice(0, -1)}–${parseISODate(b).getDate()}.` : `${shortDay(a)} – ${shortDay(b)}`; };
   const block = locked ? lockedBlock(day, def) : [];
   const options = locked ? [
     { label: "Csak ezt a napot oldom fel", hint: shortDay(day), onPick: () => save([day], false, "Nap feloldva") },
     ...(block.length > 1 ? [{ label: `Az egész lezárt szakasz feloldása (${block.length} nap)`, hint: span(block), onPick: () => save(block, false, `Feloldva: ${span(block)}`) }] : []),
   ] : [
     ...[1, 2, 3, 4, 5, 6, 7].map(n => { const days = range(addDays(day, 1), n);
-      return { label: `Utána ${n} nap lezárva`, hint: `${span(days)}${n === last ? " · legutóbb" : ""}`, onPick: () => { try { localStorage.setItem(LAST_N, String(n)); } catch { /* ignore */ } save(days, true, `Lezárva: ${span(days)}`); } }; }),
+      return { label: `Utána ${n} nap lezárva`, hint: span(days), onPick: () => save(days, true, `Lezárva: ${span(days)}`) }; }),
     { label: "Csak ezt a napot zárom le", hint: "pl. szabadság", onPick: () => save([day], true, "Nap lezárva – erre a napra nem küldünk emlékeztetőt") },
   ];
   const why = manual === "lock" ? "kézzel lezárva" : rotaActive(def.workRota) ? "munkarend szerint" : "";

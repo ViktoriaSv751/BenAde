@@ -751,7 +751,7 @@ body:not([data-layout="phone"]) .selbar { bottom: 24px; }
 .pushsetup p { color: var(--muted); font-size: 14px; } .pushsetup p.fine { font-size: 12.5px; color: var(--faint); }
 .pushsetup .steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; } .pushsetup .steps svg { display: inline; vertical-align: -2px; }
 /* action sheet */
-.asheet { position: fixed; inset: 0; z-index: 85; background: rgba(5,8,15,.45); display: grid; place-items: center; padding: 20px; animation: fade var(--t2); }
+.asheet { position: fixed; inset: 0; z-index: 85; background: var(--bg); /* solid white / black behind the sheet */ display: grid; place-items: center; padding: 20px; animation: fade var(--t2); }
 .asheet .box { width: min(420px, 100%); background: var(--bg); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-3); padding: 18px; animation: up var(--t2) var(--ease-out); }
 body[data-layout="phone"] .asheet { place-items: end stretch; padding: 0; }
 body[data-layout="phone"] .asheet .box { width: 100%; border-radius: 24px 24px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); border-bottom: 0; }
@@ -760,7 +760,8 @@ body[data-layout="phone"] .asheet .box { width: 100%; border-radius: 24px 24px 0
 .asheet .opts { display: flex; flex-direction: column; gap: 8px; }
 .asheet .opts button { display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 0 16px; border-radius: 14px; background: var(--surface-2); font-weight: 800; font-size: 15.5px; color: var(--fg); transition: background var(--t2), transform var(--t1); }
 .asheet .opts button:hover { background: var(--accent-soft); } .asheet .opts button:active { transform: scale(.98); }
-.asheet .opts button small { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.asheet .opts button { gap: 12px; text-align: left; }
+.asheet .opts button small { flex: none; text-align: right; font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); font-weight: 700; }
 .asheet .opts button.danger { color: var(--danger-fg); background: var(--danger-soft); }
 /* task row: tidy layout, actions never overlap the text */
 .trow .when { flex-wrap: wrap; row-gap: 4px; white-space: normal; }
