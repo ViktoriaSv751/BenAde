@@ -4,11 +4,12 @@ import type { Task, TaskType } from "@/lib/types";
 import { TASK_META } from "@/lib/types";
 import { DAYS_SHORT, MONTHS, addDays, addMonths, dayDiff, fmtLong, isoWeek, monthGrid, parseISODate, startOfWeek, timeOf, todayISO } from "@/lib/date";
 import { useData, useMutate, useSubject, useSubjectParts } from "@/lib/data";
-import { Empty, Icon, Seg, Skeleton, TypeIcon } from "@/components/ui";
+import { ActionSheet, Empty, Icon, Seg, Skeleton, TypeIcon } from "@/components/ui";
 import { TaskRow } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
 import { TopBar, useShell, useUrlState } from "./Shell";
-import { isLocked, rotaActive, toggleDay } from "@/lib/rota";
+import { isLocked, lockedBlock, rotaActive, setDays } from "@/lib/rota";
+import { shortDay } from "@/components/DateTime";
 import { gcalSubscribeUrl } from "@/lib/gcal";
 import Link from "next/link";
 
@@ -110,18 +111,33 @@ export function CalendarView() {
   </>;
 }
 
-/** Locked-day bar under the selected day: shows why it is locked, and lets the owner lock / free it. */
+const LAST_N = "benade.lockN";
+/** Locked-day bar under the selected day: shows why it is locked; the owner can lock it, or mark it as a work day and lock
+ *  the next few days in one go ("ezen a napon dolgozom, utána 3 nap lezárva"), and free a day or the whole locked run. */
 function DayLock({ day }: { day: string }) {
-  const data = useData(); const { role } = useShell(); const mutate = useMutate();
+  const data = useData(); const { role } = useShell(); const mutate = useMutate(); const [sheet, setSheet] = useState(false);
   if (!data) return null;
   const def = data.workspace.defaults; const locked = isLocked(day, def); const canEdit = role === "owner"; const manual = def.dayOverrides?.[day];
   if (!locked && !canEdit) return null;
-  const flip = () => mutate(async r => { await r.workspace.update({ defaults: { ...def, dayOverrides: toggleDay(def, day, todayISO()) } }); return r.workspace.reapplyLocks(); }, { success: locked ? "Nap feloldva" : "Nap lezárva – erre a napra nem küldünk emlékeztetőt" });
+  const save = (days: string[], lock: boolean, msg: string) => mutate(async r => { await r.workspace.update({ defaults: { ...def, dayOverrides: setDays(def, days, lock, todayISO()) } }); return r.workspace.reapplyLocks(); }, { success: msg });
+  const range = (from: string, n: number) => Array.from({ length: n }, (_, k) => addDays(from, k));
+  const span = (days: string[]) => days.length === 1 ? shortDay(days[0]) : `${shortDay(days[0])} – ${shortDay(days[days.length - 1])}`;
+  let last = 3; try { last = Number(localStorage.getItem(LAST_N)) || 3; } catch { /* ignore */ }
+  const block = locked ? lockedBlock(day, def) : [];
+  const options = locked ? [
+    { label: "Csak ezt a napot oldom fel", hint: shortDay(day), onPick: () => save([day], false, "Nap feloldva") },
+    ...(block.length > 1 ? [{ label: `Az egész lezárt szakasz feloldása (${block.length} nap)`, hint: span(block), onPick: () => save(block, false, `Feloldva: ${span(block)}`) }] : []),
+  ] : [
+    ...[1, 2, 3, 4, 5, 6, 7].map(n => { const days = range(addDays(day, 1), n);
+      return { label: `Utána ${n} nap lezárva`, hint: `${span(days)}${n === last ? " · legutóbb" : ""}`, onPick: () => { try { localStorage.setItem(LAST_N, String(n)); } catch { /* ignore */ } save(days, true, `Lezárva: ${span(days)}`); } }; }),
+    { label: "Csak ezt a napot zárom le", hint: "pl. szabadság", onPick: () => save([day], true, "Nap lezárva – erre a napra nem küldünk emlékeztetőt") },
+  ];
   const why = manual === "lock" ? "kézzel lezárva" : rotaActive(def.workRota) ? "munkarend szerint" : "";
   return <div className={`daylock ${locked ? "on" : ""}`}>
     <span className="ic">{locked ? Icon.lock(18) : Icon.unlock(18)}</span>
-    <span className="tx">{locked ? <><b>Lezárt nap</b>{why && <small>{why} · az emlékeztetők előtte jönnek</small>}</> : <><b>Munkanap</b>{manual === "free" ? <small>kézzel feloldva</small> : <small>lezárhatja, ha nem ér rá</small>}</>}</span>
-    {canEdit && <button type="button" className="btn sm secondary" onClick={flip}>{locked ? "Feloldás" : "Lezárás"}</button>}
+    <span className="tx">{locked ? <><b>Lezárt nap</b>{why && <small>{why} · az emlékeztetők előtte jönnek</small>}</> : <><b>Munkanap</b>{manual === "free" ? <small>kézzel feloldva</small> : <small>dolgozik ezen a napon? Utána lezárhat pár napot</small>}</>}</span>
+    {canEdit && <button type="button" className="btn sm secondary" onClick={() => setSheet(true)}>{locked ? "Feloldás" : "Lezárás"}</button>}
+    <ActionSheet open={sheet} onClose={() => setSheet(false)} title={locked ? "Feloldás" : `${shortDay(day)} dolgozom – utána hány nap legyen lezárva?`} sub={locked ? "A feloldott napokra ismét jönnek az emlékeztetők." : "Lezárt napra nem küldünk emlékeztetőt – előtte, munkanapon szólunk."} options={options} />
   </div>;
 }
 

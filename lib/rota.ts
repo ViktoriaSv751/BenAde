@@ -36,11 +36,18 @@ export function shiftLocked(list: string[]): string[] {
   return [...out].sort();
 }
 
-/** New overrides after flipping one day; an override equal to the pattern is dropped, old ones are pruned. */
-export function toggleDay(def: WorkspaceDefaults, iso: string, today: string): Record<string, "lock" | "free"> {
+/** New overrides after setting several days to locked (true) or open (false); overrides equal to the pattern are dropped. */
+export function setDays(def: WorkspaceDefaults, days: string[], lock: boolean, today: string): Record<string, "lock" | "free"> {
   const ov: Record<string, "lock" | "free"> = {};
   for (const [k, v] of Object.entries(def.dayOverrides || {})) if (k >= addDays(today, -30)) ov[k] = v;
-  const want = !isLocked(iso, def);
-  if (want === rotaLocked(iso, def.workRota)) delete ov[iso]; else ov[iso] = want ? "lock" : "free";
+  for (const d of days) { if (lock === rotaLocked(d, def.workRota)) delete ov[d]; else ov[d] = lock ? "lock" : "free"; }
   return ov;
+}
+/** The run of consecutive locked days that contains `iso` (at most a month each way). */
+export function lockedBlock(iso: string, def: WorkspaceDefaults): string[] {
+  if (!isLocked(iso, def)) return [];
+  let a = iso, b = iso;
+  for (let i = 0; i < 31 && isLocked(addDays(a, -1), def); i++) a = addDays(a, -1);
+  for (let i = 0; i < 31 && isLocked(addDays(b, 1), def); i++) b = addDays(b, 1);
+  const out: string[] = []; for (let d = a; d <= b; d = addDays(d, 1)) out.push(d); return out;
 }
