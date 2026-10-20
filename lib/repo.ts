@@ -177,6 +177,8 @@ export class DemoRepo implements Repo {
     update: async (id: string, p: Partial<Driver>) => { Object.assign(this.s.drivers.find(x => x.id === id)!, p, { updated_at: nowIso() }); this.save(); },
     remove: async (id: string) => { this.s.drivers = this.s.drivers.filter(x => x.id !== id); this.s.tasks = this.s.tasks.filter(x => x.driver_id !== id); this.save(); },
   };
+  /** Same as the database trigger: keep the written reminders as the plan, show them moved off locked days. */
+  private planLocks(t: Task, written: boolean) { if (written || !t.remind_plan) t.remind_plan = t.remind_at; setDayRules(this.s.workspace.defaults); if (t.status === "open") t.remind_at = shiftLocked(t.remind_plan); }
   private scheduleNotifs(t: Task) {
     this.s.notifications = this.s.notifications.filter(n => n.task_id !== t.id || n.status === "opened");
     if (t.status !== "open") return;
@@ -190,9 +192,9 @@ export class DemoRepo implements Repo {
         const ex = this.s.schedules.find(s => s.type === d.type && s.active && (d.vehicle_id ? s.vehicle_id === d.vehicle_id : s.driver_id === d.driver_id));
         if (ex) schedule_id = ex.id; else { const cyc = Math.max(1, Math.round((new Date(d.due_at).getTime() - new Date(d.base_date || todayISO()).getTime()) / 86400000)); const s: Schedule = { id: uid(), workspace_id: this.s.workspace.id, type: d.type, vehicle_id: d.vehicle_id || null, driver_id: d.driver_id || null, cycle_days: cyc, active: true, created_at: nowIso() }; this.s.schedules.push(s); schedule_id = s.id; }
       }
-      const t = { ...this.rowBase(), status: "open", ...d, schedule_id } as Task; this.s.tasks.push(t); this.scheduleNotifs(t); this.log("tasks", t.id, "insert"); this.save(); return t;
+      const t = { ...this.rowBase(), status: "open", ...d, schedule_id } as Task; this.planLocks(t, true); this.s.tasks.push(t); this.scheduleNotifs(t); this.log("tasks", t.id, "insert"); this.save(); return t;
     },
-    update: async (id: string, p: Partial<Task>) => { const t = this.s.tasks.find(x => x.id === id)!; Object.assign(t, p, { updated_at: nowIso() }); this.scheduleNotifs(t); this.log("tasks", id, "update"); this.save(); },
+    update: async (id: string, p: Partial<Task>) => { const t = this.s.tasks.find(x => x.id === id)!; Object.assign(t, p, { updated_at: nowIso() }); this.planLocks(t, !!p.remind_at); this.scheduleNotifs(t); this.log("tasks", id, "update"); this.save(); },
     remove: async (id: string) => { this.s.tasks = this.s.tasks.filter(x => x.id !== id); this.s.notifications = this.s.notifications.filter(n => n.task_id !== id); this.save(); },
     complete: async (id: string, doneDate?: string) => {
       const t = this.s.tasks.find(x => x.id === id)!; t.status = "done"; t.done_at = doneDate ? toTS(doneDate, "12:00") : nowIso(); t.done_by = "demo"; t.updated_at = nowIso(); this.scheduleNotifs(t); this.log("tasks", id, "done");
@@ -213,7 +215,7 @@ export class DemoRepo implements Repo {
   };
   workspace = {
     update: async (p: Partial<Workspace>) => { Object.assign(this.s.workspace, p); this.save(); },
-    reapplyLocks: async () => { setDayRules(this.s.workspace.defaults); let n = 0; for (const t of this.s.tasks) { if (t.status !== "open") continue; const r = shiftLocked(t.remind_at); if (r.join() !== t.remind_at.join()) { t.remind_at = r; this.scheduleNotifs(t); n++; } } this.save(); return n; },
+    reapplyLocks: async () => { setDayRules(this.s.workspace.defaults); let n = 0; for (const t of this.s.tasks) { if (t.status !== "open") continue; const plan = t.remind_plan || t.remind_at; const r = shiftLocked(plan); t.remind_plan = plan; if (r.join() !== t.remind_at.join()) { t.remind_at = r; this.scheduleNotifs(t); n++; } } this.save(); return n; },
     invite: async (email: string, role: Role) => { const inv: Invite = { id: uid(), workspace_id: this.s.workspace.id, email, role, token: uid(), created_at: nowIso() }; this.s.invites.push(inv); this.save(); return inv; },
     revokeInvite: async (id: string) => { this.s.invites = this.s.invites.filter(i => i.id !== id); this.save(); },
     removeMember: async (userId: string) => { this.s.members = this.s.members.filter(m => m.user_id !== userId); this.save(); },

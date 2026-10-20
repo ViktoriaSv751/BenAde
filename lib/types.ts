@@ -29,6 +29,8 @@ export interface Task {
   id: string; workspace_id: string; company_id: string; type: TaskType;
   vehicle_id?: string | null; driver_id?: string | null; schedule_id?: string | null;
   base_date?: string | null; due_at: string; all_day: boolean; remind_at: string[];
+  /** Reminders before moving them off locked days (Munkarend); remind_at is derived from it in the database. */
+  remind_plan?: string[] | null;
   status: TaskStatus; done_at?: string | null; done_by?: string | null; note?: string | null;
   address?: string | null; contact_name?: string | null; contact_phone?: string | null; participants?: number | null; topic?: string | null;
   invoice_no?: string | null; issue_date?: string | null; net_amount?: number | null; vat_percent?: number | null; gross_amount?: number | null; paid_at?: string | null; attachment_path?: string | null;

@@ -229,7 +229,7 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
     return {
       companyId: cid, vehicleId: edit?.vehicle_id || get("vid") || "", driverId: edit?.driver_id || get("did") || "",
       base: edit?.base_date || today, dueDate: due, dueTime: edit ? timeOf(edit.due_at) : type === "training" ? "10:00" : remTime, dueTouched: !!edit,
-      remDays: d.remindDaysBefore || [7, 1, 0], remTime, customRem: edit ? edit.remind_at.map(r => ({ d: dateOf(r), t: timeOf(r) })) : [], useCustom: !!edit, recurring: !edit && !!meta.cycleKey,
+      remDays: d.remindDaysBefore || [7, 1, 0], remTime, customRem: edit ? (edit.remind_plan || edit.remind_at).map(r => ({ d: dateOf(r), t: timeOf(r) })) : [], useCustom: !!edit, recurring: !edit && !!meta.cycleKey,
       qRemDate: q.d, qRemTime: q.t, qRemTouched: false, dueRemShift: false,
       note: edit?.note || "", address: edit?.address || "", contactName: edit?.contact_name || "", contactPhone: edit?.contact_phone || "", participants: edit?.participants?.toString() || "", topic: edit?.topic || "",
       invoiceNo: edit?.invoice_no || "", issue: edit?.issue_date || today, gross: edit?.gross_amount != null ? String(Math.round(edit.gross_amount)) : "", vat: edit?.vat_percent?.toString() || String(d.vatPercent ?? 27), paid: edit?.paid_at ? edit.paid_at.slice(0, 10) : "",
@@ -278,7 +278,8 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
     if (type === "invoice") return [toTS(dueRemDate, f.remTime)].filter(future);
     return f.remDays.map(n => toTS(addDays(f.dueDate, -n), f.remTime)).filter(future).sort();
   }, [quick, f.qRemDate, f.qRemTime, dueRemDate, f.remTime, f.useCustom, f.customRem, type, f.dueDate, d, f.remDays, edit]); // eslint-disable-line react-hooks/exhaustive-deps
-  // reminders on a locked day (Munkarend) go to the free day before – the database does the same
+  // shown: reminders on a locked day (Munkarend) moved to the free day before; saved: the plan (rawReminders) – the database
+  // moves it the same way and moves it back if the day is freed later
   const reminders = useMemo(() => shiftLocked(rawReminders), [rawReminders]);
 
   async function addSubject(raw = newSub): Promise<string | null> {
@@ -319,7 +320,7 @@ function TaskForm({ type, editId, onDone }: { type: TaskType; editId: string | n
     const payload: NewTask = {
       company_id: f.companyId, type, vehicle_id: meta.subject === "vehicle" ? f.vehicleId : null, driver_id: meta.subject === "driver" ? f.driverId : null,
       base_date: type === "invoice" ? f.issue : type === "training" ? null : f.base,
-      due_at: toTS(f.dueDate, type === "invoice" ? "08:00" : f.dueTime), all_day: type === "invoice", remind_at: reminders, note: f.note.trim() || null,
+      due_at: toTS(f.dueDate, type === "invoice" ? "08:00" : f.dueTime), all_day: type === "invoice", remind_at: rawReminders, note: f.note.trim() || null,
       address: type === "training" ? f.address.trim() : null, contact_name: type === "training" ? titleCase(f.contactName) || null : null, contact_phone: type === "training" ? f.contactPhone.trim() || null : null, participants: type === "training" && f.participants ? Number(f.participants) : null, topic: type === "training" ? f.topic.trim() || null : null,
       invoice_no: type === "invoice" ? f.invoiceNo.trim() : null, issue_date: type === "invoice" ? f.issue : null, gross_amount: type === "invoice" ? grossN : null, vat_percent: type === "invoice" ? vatN : null, net_amount: type === "invoice" ? Math.round(grossN / (1 + vatN / 100)) : null, paid_at: type === "invoice" ? f.paid || null : null,
       schedule_id: edit?.schedule_id || null, attachment_path: edit?.attachment_path || null,
