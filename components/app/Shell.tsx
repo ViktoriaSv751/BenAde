@@ -53,7 +53,7 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   // brand screen until the first data is in, then the app fades in from it (no skeleton flash after login)
   const ready = !!data || snap.isError; const [boot, setBoot] = useState<"on" | "leaving" | "off">("on");
   useEffect(() => { if (!ready) return; hideSplash(); setBoot(b => b === "on" ? "leaving" : b); }, [ready]);
-  useEffect(() => { if (boot !== "leaving") return; const t = setTimeout(() => setBoot("off"), 380); return () => clearTimeout(t); }, [boot]);
+  useEffect(() => { if (boot !== "leaving") return; const t = setTimeout(() => setBoot("off"), 700); return () => clearTimeout(t); }, [boot]);
   const base = demo ? "/demo" : "/app";
   const openCapture = useCallback((type?: string, prefill?: Record<string, string>) => set({ uj: type || "menu", ...(prefill || {}) }), [set]);
   const openTask = useCallback((id: string) => set({ t: id }), [set]);
