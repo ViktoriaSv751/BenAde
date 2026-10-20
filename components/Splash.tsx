@@ -17,11 +17,18 @@ export function SplashScreen({ leaving = false }: { leaving?: boolean }) {
 }
 
 const EV = "benade:splash";
-const MIN_MS = 2000, FADE_MS = 900, MAX_MS = 12_000;
+const MIN_MS = 2000, FADE_MS = 800, MAX_MS = 12_000;
 type Cmd = { on: boolean; until?: string };
 
 /** Show the splash now; it stays until hideSplash() (the app is ready) or, with `until`, until that page has opened. */
 export function showSplash(until?: string) { window.dispatchEvent(new CustomEvent<Cmd>(EV, { detail: { on: true, until } })); }
+/** The page under the splash eases into place as the splash goes (html.splash-reveal, see globals.css). */
+let revealTimer: ReturnType<typeof setTimeout> | undefined;
+export function revealPage() {
+  const d = document.documentElement; clearTimeout(revealTimer);
+  d.classList.remove("splash-reveal"); void d.offsetWidth; d.classList.add("splash-reveal");
+  revealTimer = setTimeout(() => d.classList.remove("splash-reveal"), 1400);
+}
 export function hideSplash() { window.dispatchEvent(new CustomEvent<Cmd>(EV, { detail: { on: false } })); }
 
 /** Lives in the root layout, so it survives the route change it covers. */
@@ -32,7 +39,7 @@ export function SplashHost() {
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   const close = () => {
     clear(); const wait = Math.max(0, MIN_MS - (Date.now() - since.current));
-    timers.current.push(setTimeout(() => { setState(s => s === "off" ? s : "leaving"); timers.current.push(setTimeout(() => setState("off"), FADE_MS)); }, wait));
+    timers.current.push(setTimeout(() => { setState(s => { if (s === "off") return s; revealPage(); return "leaving"; }); timers.current.push(setTimeout(() => setState("off"), FADE_MS)); }, wait));
   };
   const closeRef = useRef(close); closeRef.current = close;
   useEffect(() => {

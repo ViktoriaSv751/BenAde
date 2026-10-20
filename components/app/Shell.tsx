@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLayout, type Layout } from "@/lib/layout";
 import { useData, useMutate, useOnline, useSnapshot, useTheme, useToast } from "@/lib/data";
-import { SplashScreen, hideSplash } from "@/components/Splash";
+import { SplashScreen, hideSplash, revealPage } from "@/components/Splash";
 import { setDayRules } from "@/lib/rota";
 import { Icon } from "@/components/ui";
 import { todayISO } from "@/lib/date";
@@ -56,7 +56,7 @@ export function Shell({ children, email, name, demo, signOut }: { children: Reac
   const ready = !!data || snap.isError; const [boot, setBoot] = useState<"on" | "leaving" | "off">("on");
   const bootAt = useRef(Date.now());
   useEffect(() => { if (!ready) return; hideSplash(); const t = setTimeout(() => setBoot(b => b === "on" ? "leaving" : b), Math.max(0, 1600 - (Date.now() - bootAt.current))); return () => clearTimeout(t); }, [ready]);
-  useEffect(() => { if (boot !== "leaving") return; const t = setTimeout(() => setBoot("off"), 900); return () => clearTimeout(t); }, [boot]);
+  useEffect(() => { if (boot !== "leaving") return; revealPage(); const t = setTimeout(() => setBoot("off"), 800); return () => clearTimeout(t); }, [boot]);
   const base = demo ? "/demo" : "/app";
   const openCapture = useCallback((type?: string, prefill?: Record<string, string>) => set({ uj: type || "menu", ...(prefill || {}) }), [set]);
   const openTask = useCallback((id: string) => set({ t: id }), [set]);

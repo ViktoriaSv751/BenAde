@@ -906,16 +906,19 @@ html:has(.auth-page), body:has(.auth-page), .auth-page { background: #000 !impor
 .portalcard .pexp { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 8px 0 2px; }
 .portalcard .pexp.warn { color: var(--time-fg, var(--fg)); }
 
-/* splash: the truck on the theme's plain background; it eases in, holds, then zooms away as the page opens */
+/* splash: the truck on the theme's plain background. It rises in softly, holds, then steps back and fades
+   while the page underneath eases up into place – no zoom, no flash. */
 .splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--bg); color: var(--fg); }
-.splash-in { animation: splash-in 1.1s cubic-bezier(.2,.8,.2,1) both; }
-.logo-truck { display: block; width: min(64vw, 300px); aspect-ratio: 900 / 677; background: currentColor; -webkit-mask: url(/img/truck-mask.png) center / contain no-repeat; mask: url(/img/truck-mask.png) center / contain no-repeat; }
-.splash.leaving { animation: splash-out .9s cubic-bezier(.7,0,.2,1) forwards; pointer-events: none; }
-.splash.leaving .splash-in { animation: splash-zoom .9s cubic-bezier(.7,0,.2,1) forwards; }
-@keyframes splash-in { from { opacity: 0; transform: translateX(-28px) scale(.94); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
-@keyframes splash-zoom { 0% { transform: none; opacity: 1; } 30% { transform: scale(.95); opacity: 1; } 100% { transform: scale(6); opacity: 0; } }
-@keyframes splash-out { 0%, 45% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-@media (prefers-reduced-motion: reduce) { .splash-in, .splash.leaving, .splash.leaving .splash-in { animation-duration: .01s !important; } }
+.splash-in { animation: splash-in .9s cubic-bezier(.16,1,.3,1) both; }
+.logo-truck { display: block; width: min(46vw, 210px); aspect-ratio: 900 / 677; background: currentColor; -webkit-mask: url(/img/truck-mask.png) center / contain no-repeat; mask: url(/img/truck-mask.png) center / contain no-repeat; }
+.splash.leaving { animation: splash-out .8s cubic-bezier(.4,0,.2,1) forwards; pointer-events: none; }
+.splash.leaving .splash-in { animation: splash-logo-out .45s cubic-bezier(.4,0,1,1) forwards; }
+@keyframes splash-in { from { opacity: 0; transform: translateY(10px) scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes splash-logo-out { to { opacity: 0; transform: scale(.94); filter: blur(2px); } }
+@keyframes splash-out { 0%, 30% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+html.splash-reveal .shell .main, html.splash-reveal .shell .side, html.splash-reveal .shell .tabbar, html.splash-reveal .auth-wrap { animation: page-in .75s .2s cubic-bezier(.16,1,.3,1) both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .splash-in, .splash.leaving, .splash.leaving .splash-in, html.splash-reveal .shell .main, html.splash-reveal .shell .side, html.splash-reveal .shell .tabbar, html.splash-reveal .auth-wrap { animation-duration: .01s !important; animation-delay: 0s !important; } }
 
 /* Munkarend: locked days */
 .cal .cell.locked, .weekstrip button.locked { background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--fg) 6%, transparent) 6px 8px); }
