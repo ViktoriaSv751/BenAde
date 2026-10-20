@@ -9,6 +9,8 @@ import { TaskRow } from "./TaskRow";
 import { TaskDetail } from "./TaskDetail";
 import { TopBar, useShell, useUrlState } from "./Shell";
 import { isLocked, rotaActive, toggleDay } from "@/lib/rota";
+import { gcalSubscribeUrl } from "@/lib/gcal";
+import Link from "next/link";
 
 type Mode = "month" | "week" | "day";
 const TYPES: { v: TaskType | "all"; l: string }[] = [{ v: "all", l: "Mind" }, { v: "vu_download", l: "Fedélzeti" }, { v: "card_download", l: "Kártya" }, { v: "training", l: "Oktatás" }, { v: "invoice", l: "Számla" }, { v: "calibration", l: "Kalibráció" }, { v: "card_expiry", l: "Kártya lej." }];
@@ -84,6 +86,7 @@ export function CalendarView() {
       <div className="sec" style={{ marginTop: mode === "day" ? 4 : 14 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div>
       <DayLock day={cursor} />
       {dayEl}
+      <CalTools />
     </div>
   ) : (
     <div className="content">
@@ -96,6 +99,7 @@ export function CalendarView() {
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>{filters}</div>
       {mode === "month" ? monthGridEl : mode === "week" ? weekEl : <><div className="sec" style={{ marginTop: 4 }}><h2>{fmtLong(cd)}</h2><span className="n">{dayList.length}</span></div><DayLock day={cursor} />{dayEl}</>}
+      <CalTools />
       <div className="info">{Icon.info()}<span>Húzással áthelyezheti a tételeket másik napra (az emlékeztetők is eltolódnak). A jogi határidőt a lezáráskor számolt ciklus adja – azt a tétel részleteiben lehet felülírni.</span></div>
     </div>
   );
@@ -118,5 +122,15 @@ function DayLock({ day }: { day: string }) {
     <span className="ic">{locked ? Icon.lock(18) : Icon.unlock(18)}</span>
     <span className="tx">{locked ? <><b>Lezárt nap</b>{why && <small>{why} · az emlékeztetők előtte jönnek</small>}</> : <><b>Munkanap</b>{manual === "free" ? <small>kézzel feloldva</small> : <small>lezárhatja, ha nem ér rá</small>}</>}</span>
     {canEdit && <button type="button" className="btn sm secondary" onClick={flip}>{locked ? "Feloldás" : "Lezárás"}</button>}
+  </div>;
+}
+
+/** Calendar footer: where to set the work pattern, and one-tap Google Calendar sync of every deadline. */
+function CalTools() {
+  const data = useData(); const { demo, role } = useShell(); const base = demo ? "/demo" : "/app";
+  if (!data) return null; const rota = data.workspace.defaults.workRota;
+  return <div className="caltools">
+    <Link className="btn secondary sm" href={`${base}/beallitasok#munkarend`}>{Icon.lock(16)} {rotaActive(rota) ? `Munkarend: ${rota!.on} nap munka, ${rota!.off} nap lezárva` : role === "owner" ? "Munkarend beállítása (első munkanap)" : "Munkarend"}</Link>
+    {!demo && <a className="btn secondary sm" href={gcalSubscribeUrl(data.workspace.ics_token)} target="_blank" rel="noopener">{Icon.calendar(16)} Összes a Google Naptárba</a>}
   </div>;
 }

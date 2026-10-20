@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Snapshot, WorkRota, WorkspaceDefaults } from "@/lib/types";
 import { useData, useMutate, useRepo, useToast } from "@/lib/data";
@@ -9,6 +9,7 @@ import { Copyable, Field, Icon, Skeleton, Switch, useConfirm } from "@/component
 import { DateField } from "@/components/DateTime";
 import { DAYS_SHORT, addDays, fmtDate, parseISODate, todayISO } from "@/lib/date";
 import { isLocked } from "@/lib/rota";
+import { gcalSubscribeUrl } from "@/lib/gcal";
 import { ThemeToggle, TopBar, useShell } from "./Shell";
 
 export function SettingsView() {
@@ -39,7 +40,7 @@ export function SettingsView() {
         </section>
         <section className="card pad"><Head icon={Icon.calendar(18)} title="Naptár-előfizetés (ICS)" sub="Google/Apple/Outlook naptárba húzható élő feed" />
           {demo ? <div className="info">{Icon.info()}<span>A tesztfiókban nincs ICS feed. Saját fiókkal a munkaterület kap egy titkos linket.</span></div>
-            : <><Copyable text={`${typeof location !== "undefined" ? location.origin : ""}/api/ics/${w.ics_token}`} /><p className="hint" style={{ marginTop: 8, fontSize: 12.5, color: "var(--muted)" }}>Apple Naptár: Fájl → Új naptár-előfizetés. Google: Egyéb naptárak → URL-ről. Aki ismeri a linket, látja a határidőket – szükség esetén új linket kérhet.</p>{canEdit && <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={async () => { if (await confirm({ title: "Új ICS link", text: "A régi link azonnal megszűnik; a már feliratkozott naptárakat újra kell kötni.", okLabel: "Új link" })) mutate(r => r.workspace.update({ ics_token: cryptoToken() }), { success: "Új link kész" }); }}>{Icon.refresh(14)} Új link</button>}</>}
+            : <><a className="btn primary sm" href={gcalSubscribeUrl(w.ics_token)} target="_blank" rel="noopener" style={{ marginBottom: 10 }}>{Icon.calendar(16)} Összes határidő a Google Naptárba</a><Copyable text={`${typeof location !== "undefined" ? location.origin : ""}/api/ics/${w.ics_token}`} /><p className="hint" style={{ marginTop: 8, fontSize: 12.5, color: "var(--muted)" }}>Apple Naptár: Fájl → Új naptár-előfizetés. Google: Egyéb naptárak → URL-ről. Aki ismeri a linket, látja a határidőket – szükség esetén új linket kérhet.</p>{canEdit && <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={async () => { if (await confirm({ title: "Új ICS link", text: "A régi link azonnal megszűnik; a már feliratkozott naptárakat újra kell kötni.", okLabel: "Új link" })) mutate(r => r.workspace.update({ ics_token: cryptoToken() }), { success: "Új link kész" }); }}>{Icon.refresh(14)} Új link</button>}</>}
         </section>
         <section className="card pad"><Head icon={Icon.dl(18)} title="Adatok" sub="Export, import, biztonsági mentés" />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -100,6 +101,8 @@ function RotaForm({ disabled }: { disabled: boolean }) {
   const data = useData()!; const mutate = useMutate(); const def = data.workspace.defaults; const today = todayISO();
   const [f, setF] = useState<WorkRota>(def.workRota || { enabled: false, start: today, on: 1, off: 3 }); const [dirty, setDirty] = useState(false);
   const up = (p: Partial<WorkRota>) => { setF({ ...f, ...p }); setDirty(true); };
+  // opened from the Calendar's "Munkarend" button: bring this card into view
+  useEffect(() => { if (location.hash === "#munkarend") setTimeout(() => document.getElementById("munkarend")?.scrollIntoView({ block: "start", behavior: "smooth" }), 250); }, []);
   const preview = { ...def, workRota: f }; const days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
   const manual = Object.keys(def.dayOverrides || {}).filter(k => k >= today).sort();
   const save = (rota: WorkRota, overrides = def.dayOverrides, msg = rota.enabled ? "Munkarend mentve" : "Munkarend kikapcsolva") =>

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "cap:sync": "npx cap sync",
-    "cap:assets": "npx capacitor-assets generate --iconBackgroundColor '#0B1530' --splashBackgroundColor '#0B1530' --iconBackgroundColorDark '#0B1530' --splashBackgroundColorDark '#0B1530'"
+    "cap:assets": "npx capacitor-assets generate --iconBackgroundColor '#FFFFFF' --splashBackgroundColor '#FFFFFF' --iconBackgroundColorDark '#FFFFFF' --splashBackgroundColorDark '#000000'"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

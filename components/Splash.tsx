@@ -2,18 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
-/** The BenAde mark (tachograph gauge with a truck) in currentColor: black on light, white on dark. */
-export function LogoMark({ size = 96 }: { size?: number }) {
-  return (
-    <svg className="logo-mark" width={size} height={size} viewBox="180 208 664 664" fill="none" stroke="currentColor" aria-hidden focusable="false">
-      <circle cx="512" cy="540" r="300" strokeWidth="44" opacity=".16" />
-      <circle cx="512" cy="540" r="300" strokeWidth="44" strokeLinecap="round" strokeDasharray="1300 1885" transform="rotate(135 512 540)" />
-      <g strokeWidth="16" strokeLinecap="round"><line x1="512" y1="296" x2="512" y2="252" /><line x1="268" y1="540" x2="224" y2="540" /><line x1="756" y1="540" x2="800" y2="540" /></g>
-      <path d="M512 540 L690 362" strokeWidth="38" strokeLinecap="round" />
-      <circle cx="512" cy="540" r="36" strokeWidth="30" />
-      <g fill="currentColor" stroke="none"><rect x="400" y="684" width="142" height="76" rx="16" /><rect x="550" y="706" width="62" height="54" rx="13" /><circle cx="440" cy="776" r="17" /><circle cx="574" cy="776" r="17" /></g>
-    </svg>
-  );
+/** The BenAde truck, drawn in the theme's text colour through a mask: black on white, white on black. */
+export function LogoMark() {
+  return <span className="logo-truck" role="img" aria-label="BenAde" />;
 }
 
 /** Full-screen logo on the theme's plain background, shown between login, app and logout. */
@@ -26,7 +17,7 @@ export function SplashScreen({ leaving = false }: { leaving?: boolean }) {
 }
 
 const EV = "benade:splash";
-const MIN_MS = 900, FADE_MS = 700, MAX_MS = 12_000;
+const MIN_MS = 2000, FADE_MS = 900, MAX_MS = 12_000;
 type Cmd = { on: boolean; until?: string };
 
 /** Show the splash now; it stays until hideSplash() (the app is ready) or, with `until`, until that page has opened. */

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   applicationName: "BenAde",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "BenAde", statusBarStyle: "default" },
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/favicon.png", sizes: "64x64" }, { url: "/icon-192.png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
   openGraph: { title: "BenAde – Tachográf Emlékeztető", description: "Minden fontos tachográf-határidő időben.", type: "website", locale: "hu_HU", images: ["/og.png"] },
 };
 
@@ -34,7 +34,7 @@ const themeInit = `try{var t=localStorage.getItem('benade.theme');if(t==='light'
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="hu" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
+      <head><link rel="preload" href="/img/truck-mask.png" as="image" /><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
       <body>{children}<SplashHost /><VersionWatch /></body>
     </html>
   );

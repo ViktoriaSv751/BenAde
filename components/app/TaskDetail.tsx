@@ -10,6 +10,7 @@ import { useData, useMutate, useRepo, useToast, useUndoableRemove } from "@/lib/
 import { Icon, Panel, Ring, TypeIcon, useConfirm } from "@/components/ui";
 import { ActionSheet } from "@/components/ui";
 import { useShell, useUrlState } from "./Shell";
+import { gcalEventUrl } from "@/lib/gcal";
 
 export function TaskDetailPanel({ id, onClose }: { id: string | null; onClose: () => void }) {
   const data = useData(); const { layout, demo } = useShell(); const path = usePathname();
@@ -63,6 +64,7 @@ export function TaskDetail({ t, onDone }: { t: Task; onDone?: () => void }) {
           : (done ? <button className="btn secondary" onClick={() => mutate(r => r.task.reopen(t.id))}>{Icon.refresh()} Újranyitás</button> : <button className="btn ok" onClick={complete}>{Icon.check()} Elvégezve{schedule ? " + új ciklus" : ""}</button>)}
         {!done && <SnoozeMenu onPick={snooze} />}
         <button className="btn secondary" onClick={edit}>{Icon.pen()} Szerkesztés</button>
+        {!done && <a className="btn secondary" href={gcalEventUrl(data, t)} target="_blank" rel="noopener" title="Új esemény a saját Google Naptárában, kitöltve">{Icon.calendar(18)} Google Naptárba</a>}
       </div>
 
       <div className="card pad">
